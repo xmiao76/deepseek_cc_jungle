@@ -1,0 +1,8 @@
+/.claude
+/JungleGame.Core/obj
+/JungleGame.Tests/bin
+/JungleGame.Tests/obj
+/JungleGame.UI/bin
+/JungleGame.UI/obj
+*.dll
+/release

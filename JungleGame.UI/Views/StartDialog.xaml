@@ -1,0 +1,32 @@
+<Window x:Class="JungleGame.UI.Views.StartDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Jungle Game — New Game" Width="400" Height="320"
+        ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
+        Background="#1E1E2E" Foreground="White">
+    <StackPanel Margin="30" VerticalAlignment="Center">
+        <TextBlock Text="Jungle (Dou Shou Qi)" FontSize="24" FontWeight="Bold"
+                   HorizontalAlignment="Center" Margin="0,0,0,20"
+                   Foreground="#FFD700"/>
+
+        <TextBlock Text="Who moves first?" FontSize="14" Margin="0,0,0,10"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+            <RadioButton x:Name="HumanFirstRadio" Content="You (Human)" IsChecked="True"
+                         FontSize="13" Margin="10,0" Foreground="White"/>
+            <RadioButton x:Name="AIFirstRadio" Content="AI Computer"
+                         FontSize="13" Margin="10,0" Foreground="White"/>
+        </StackPanel>
+
+        <CheckBox x:Name="AiVsAiCheck" Content="AI vs AI (watch mode)"
+                  FontSize="13" Margin="10,0,0,20" Foreground="White"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="Start Game" Click="Start_Click" Width="120" Height="35"
+                    Margin="10" FontSize="14" Background="#4CAF50" Foreground="White"
+                    BorderThickness="0" Cursor="Hand"/>
+            <Button Content="Cancel" Click="Cancel_Click" Width="80" Height="35"
+                    Margin="10" FontSize="14" Background="#555" Foreground="White"
+                    BorderThickness="0" Cursor="Hand"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

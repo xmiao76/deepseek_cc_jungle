@@ -1,0 +1,20 @@
+<Window x:Class="JungleGame.UI.Views.GameOverDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Game Over" Width="350" Height="220"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        Background="#1E1E2E" Foreground="White">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBlock x:Name="ResultText" FontSize="28" FontWeight="Bold"
+                   HorizontalAlignment="Center" Margin="0,0,0,20"
+                   Foreground="#FFD700"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="New Game" Click="NewGame_Click" Width="120" Height="35"
+                    Margin="10" FontSize="14" Background="#4CAF50" Foreground="White"
+                    BorderThickness="0" Cursor="Hand"/>
+            <Button Content="Close" Click="Close_Click" Width="80" Height="35"
+                    Margin="10" FontSize="14" Background="#555" Foreground="White"
+                    BorderThickness="0" Cursor="Hand"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
