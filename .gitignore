@@ -5,4 +5,7 @@
 /JungleGame.UI/bin
 /JungleGame.UI/obj
 *.dll
-/release
+/JungleGame.Core/bin
+/JungleGame.Core/bin
+*.exe
+/JungleGame.Core/bin

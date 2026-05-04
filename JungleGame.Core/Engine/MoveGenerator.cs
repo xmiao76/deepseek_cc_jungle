@@ -41,33 +41,19 @@ public static class MoveGenerator
         }
 
         // Jump moves for Lion and Tiger
+        // Search all orthogonal distances ≥ 2, let MoveValidator determine which are valid jumps
         if (piece.Animal == Animal.Lion || piece.Animal == Animal.Tiger)
         {
-            // Lion can jump both horizontally and vertically
-            // Tiger can only jump vertically
-
-            // Vertical jumps (both lion and tiger): try jumping across the river
-            foreach (var (dc, dr) in new[] { (0, 4), (0, -4) }) // ±4 rows crosses river
+            foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
             {
-                var target = new Position(c + dc, r + dr);
-                if (!target.IsValid) continue;
+                // Tiger cannot jump horizontally
+                if (dc != 0 && piece.Animal == Animal.Tiger)
+                    continue;
 
-                // Only consider if this is a jump move (distance > 1 and orthogonal)
-                var error = MoveValidator.Validate(state, piece.Position, target);
-                if (error == null)
+                for (int dist = 2; dist <= 8; dist++)
                 {
-                    var defender = state.GetPieceAt(target);
-                    moves.Add(new Move(piece.Position, target, defender));
-                }
-            }
-
-            // Horizontal jumps (lion only): try jumping across the river
-            if (piece.Animal == Animal.Lion)
-            {
-                foreach (var (dc, dr) in new[] { (3, 0), (-3, 0) }) // ±3 cols crosses river
-                {
-                    var target = new Position(c + dc, r + dr);
-                    if (!target.IsValid) continue;
+                    var target = new Position(c + dc * dist, r + dr * dist);
+                    if (!target.IsValid) break;
 
                     var error = MoveValidator.Validate(state, piece.Position, target);
                     if (error == null)
@@ -101,18 +87,16 @@ public static class MoveGenerator
             // Jump moves
             if (piece.Animal == Animal.Lion || piece.Animal == Animal.Tiger)
             {
-                foreach (var (dc, dr) in new[] { (0, 4), (0, -4) })
+                foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
                 {
-                    var target = new Position(c + dc, r + dr);
-                    if (target.IsValid && MoveValidator.Validate(state, piece.Position, target) == null)
-                        count++;
-                }
-                if (piece.Animal == Animal.Lion)
-                {
-                    foreach (var (dc, dr) in new[] { (3, 0), (-3, 0) })
+                    if (dc != 0 && piece.Animal == Animal.Tiger)
+                        continue;
+
+                    for (int dist = 2; dist <= 8; dist++)
                     {
-                        var target = new Position(c + dc, r + dr);
-                        if (target.IsValid && MoveValidator.Validate(state, piece.Position, target) == null)
+                        var target = new Position(c + dc * dist, r + dr * dist);
+                        if (!target.IsValid) break;
+                        if (MoveValidator.Validate(state, piece.Position, target) == null)
                             count++;
                     }
                 }
