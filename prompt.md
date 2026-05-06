@@ -27,9 +27,9 @@ Rule clarification for river jumping:
 - Implement the lion and tiger river-jump behavior using this explicit interpretation.
 - The lion is stronger than the tiger for river jumping.
 - The lion can jump across the river both horizontally and vertically.
-- Horizontal lion jump means jumping across 3 river squares to the next non-water square on the opposite side.
-- Vertical lion jump means jumping across 2 river squares to the next non-water square on the opposite side.
-- The tiger can jump only vertically across 2 river squares to the next non-water square on the opposite side.
+- Horizontal lion jump means jumping 4 rows across river.
+- Vertical lion jump means jumping 3 cols across river.
+- The tiger can jump only vertically 3 cols across river.
 - Do not assume tiger has the same horizontal jump ability as lion unless the implementation explicitly supports it as an optional documented variant.
 - Any rat-blocking behavior must still be handled correctly according to the selected ruleset.
 

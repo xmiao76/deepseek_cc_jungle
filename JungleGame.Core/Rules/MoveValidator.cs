@@ -71,10 +71,10 @@ public static class MoveValidator
         if (piece.Animal != Animal.Lion && piece.Animal != Animal.Tiger)
             return "Only Lion and Tiger can jump across rivers.";
 
-        bool isHorizontal = dCol != 0;
-        bool isVertical = dRow != 0;
+        bool isHorizontal = dRow != 0;
+        bool isVertical = dCol != 0;
 
-        // Tiger cannot jump horizontally
+        // Tiger cannot jump horizontally (along rows)
         if (isHorizontal && piece.Animal == Animal.Tiger)
             return "Tiger cannot jump horizontally across the river.";
 
@@ -124,14 +124,14 @@ public static class MoveValidator
     /// Left river: cols 1-2, rows 3-5 (2 wide × 3 tall)
     /// Right river: cols 4-5, rows 3-5
     ///
-    /// Horizontal jump: crosses the river width (2 water squares), from col 0→3 or 3→0 or 3→6 or 6→3
-    /// Vertical jump: crosses the river height (3 water squares), from row 2→6 or 6→2
+    /// Horizontal jump: crosses the river height (across rows, 3 water squares), from row 2→6 or 6→2
+    /// Vertical jump: crosses the river width (across columns, 2 water squares), from col 0→3 or 3→0 or 3→6 or 6→3
     /// </summary>
     private static List<Position>? GetJumpWaterSquares(Position from, Position to, int dCol, int dRow)
     {
         var squares = new List<Position>();
 
-        if (dCol != 0) // Horizontal jump
+        if (dCol != 0) // Vertical jump (along columns)
         {
             int step = Math.Sign(dCol);
             int col = from.Col + step;
@@ -143,7 +143,7 @@ public static class MoveValidator
                 col += step;
             }
         }
-        else if (dRow != 0) // Vertical jump
+        else if (dRow != 0) // Horizontal jump (along rows)
         {
             int step = Math.Sign(dRow);
             int col = from.Col;

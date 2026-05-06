@@ -75,7 +75,7 @@ MVVM pattern with code-behind board rendering.
 ## Key design decisions
 
 - All Core types are immutable (`readonly struct` or immutable collections). `GameController.ApplyMove` returns a new `GameState`; it never mutates the input
-- Lion jumps both horizontally (3 cols across river) and vertically (4 rows); Tiger jumps only vertically
+- Lion jumps both horizontally (4 rows across river) and vertically (3 cols); Tiger jumps only vertically(3 cols across river)
 - Rat-in-water cannot be captured by any land piece; Rat can capture Rat in water; Rat cannot capture Elephant from water
 - A piece on an opponent's trap has effective rank 0 for capture resolution
 - The board flip feature maps visual coordinates `(c,r)` → `(6-c, 8-r)` but preserves the logical game state unchanged. `HumanPlayer` always maps to Blue internally; flip only rotates the view

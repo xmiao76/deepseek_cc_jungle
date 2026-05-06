@@ -46,8 +46,8 @@ public static class MoveGenerator
         {
             foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
             {
-                // Tiger cannot jump horizontally
-                if (dc != 0 && piece.Animal == Animal.Tiger)
+                // Tiger cannot jump horizontally (along rows)
+                if (dr != 0 && piece.Animal == Animal.Tiger)
                     continue;
 
                 for (int dist = 2; dist <= 8; dist++)
@@ -89,7 +89,7 @@ public static class MoveGenerator
             {
                 foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
                 {
-                    if (dc != 0 && piece.Animal == Animal.Tiger)
+                    if (dr != 0 && piece.Animal == Animal.Tiger)
                         continue;
 
                     for (int dist = 2; dist <= 8; dist++)

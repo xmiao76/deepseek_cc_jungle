@@ -1,42 +1,44 @@
 Jungle (Dou Shou Qi / 鬥獸棋)
 ===============================
 
-A Windows desktop board game where a human plays against the computer AI.
+A Windows desktop board game with WPF GUI and AI opponent.
 
-Launch
-------
-Double-click JungleGame.UI.exe to start.
+System Requirements
+-------------------
+- Windows 10 or later (x64)
+- .NET 8.0 runtime (self-contained, no separate install needed)
 
-Gameplay
---------
-- Blue moves first. Click a piece, then click a highlighted square to move.
-- Capture enemy pieces by moving onto their square (higher rank wins).
-- Win by moving any piece into the opponent's Den or capturing all enemy pieces.
+How to Run
+----------
+Double-click JungleGame.UI.exe to start the game.
 
-River Jumping (Lion & Tiger)
-----------------------------
-- Rivers are the blue squares in columns b-c and e-f, rows 4-6.
-- Tiger can jump VERTICALLY across the river (along a column).
-- Lion can jump both HORIZONTALLY and VERTICALLY.
-- To jump: move your Tiger/Lion to a square directly next to the river,
-  then click it — the jump destination across the river will highlight.
-- Tiger/Lion must be on a river column (b, c, e, or f) to jump.
-- A Rat in the water blocks the jump.
-
-Special Rules
--------------
-- Rat (1) can enter river squares and can capture Elephant (8).
-- Elephant cannot capture Rat.
-- A piece on an enemy trap can be captured by any piece regardless of rank.
+Game Rules
+----------
+- Each player controls 8 animal pieces ranked 1 (Rat) through 8 (Elephant)
+- Higher ranked pieces capture lower ranked ones
+- Special rules: Rat can capture Elephant, Elephant cannot capture Rat
+- Rat can enter river water squares; other animals cannot
+- Lion can jump across the river horizontally (along rows) and vertically (along columns)
+- Tiger can jump across the river vertically (along columns) only
+- A piece on an opponent's trap has effective rank 0
+- Win by entering the opponent's den or capturing all enemy pieces
 
 Controls
 --------
-- New Game: Start a new game (choose who moves first).
-- Flip Board: Rotate the board 180 degrees for a different view angle.
-- AI vs AI: Check the box to watch two AI opponents play.
+- Click a piece to select it, then click a highlighted destination to move
+- Blue moves first (bottom), Red moves second (top)
+- Toggle "Flip Board" to rotate the view
+- Enable "AI vs AI" to watch the computer play itself
 
 Notes
 -----
-- Built with .NET 8 and WPF.
-- AI uses PVS alpha-beta search with quiescence search at 4-second time limit.
-- Game model: DeepSeek V4 Pro. Code agent: Claude Code (Anthropic).
+- The AI opponent uses Minimax with iterative deepening alpha-beta search
+- Move time limit: approximately 2 seconds per AI turn
+- Game saves are not supported in this version
+
+Build Info
+----------
+- Version: 1.0.0
+- Built with .NET 8.0
+- Code agent: Claude Code (Anthropic CLI)
+- AI model: DeepSeek V4 Pro (1M context window)
