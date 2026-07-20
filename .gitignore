@@ -9,3 +9,10 @@
 /JungleGame.Core/bin
 *.exe
 /JungleGame.Core/bin
+*.cache
+*.pdb
+/src/JungleGame.Desktop/obj/Debug
+/src/JungleGame.Desktop/obj
+/src/JungleGame.Core/obj
+/src/JungleGame.Tests/obj
+/src/JungleGame.Desktop/bin

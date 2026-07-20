@@ -1,0 +1,35 @@
+Compact initial position:
+    A B C D E F G
+1   l . . . . . t
+2   . d . . . c .
+3   r . p . w . e
+4   . . . . . . .
+5   . . . . . . .
+6   . . . . . . .
+7   E . W . P . R
+8   . C . . . D .
+9   T . . . . . L
+
+Uppercase = BLUE/SOUTH
+Lowercase = RED/NORTH
+
+E/e = Elephant
+L/l = Lion
+T/t = Tiger
+P/p = Leopard
+W/w = Wolf
+D/d = Dog
+C/c = Cat
+R/r = Rat
+
+Compact terrain:
+    A B C D E F G
+1   L L T N T L L
+2   L L L T L L L
+3   L L L L L L L
+4   L W W L W W L
+5   L W W L W W L
+6   L W W L W W L
+7   L L L L L L L
+8   L L L T L L L
+9   L L T S T L L

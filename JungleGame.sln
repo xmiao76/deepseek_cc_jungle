@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Core", "JungleGame.Core\JungleGame.Core.csproj", "{6C466F3C-FC40-4A06-A642-0ED271F2E900}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{25FEA3F6-9975-48DD-A987-226BEF5BEE05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.UI", "JungleGame.UI\JungleGame.UI.csproj", "{46D24ED1-4482-4598-ACE3-96867B2E18AD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Core", "src\JungleGame.Core\JungleGame.Core.csproj", "{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Tests", "JungleGame.Tests\JungleGame.Tests.csproj", "{467B7EC7-33E6-4166-8A52-4DECF2C4554A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Desktop", "src\JungleGame.Desktop\JungleGame.Desktop.csproj", "{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Tests", "src\JungleGame.Tests\JungleGame.Tests.csproj", "{3C168B92-77ED-4D27-8F63-5DA68CBC0919}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,17 +20,22 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6C466F3C-FC40-4A06-A642-0ED271F2E900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6C466F3C-FC40-4A06-A642-0ED271F2E900}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6C466F3C-FC40-4A06-A642-0ED271F2E900}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6C466F3C-FC40-4A06-A642-0ED271F2E900}.Release|Any CPU.Build.0 = Release|Any CPU
-		{46D24ED1-4482-4598-ACE3-96867B2E18AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{46D24ED1-4482-4598-ACE3-96867B2E18AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{46D24ED1-4482-4598-ACE3-96867B2E18AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{46D24ED1-4482-4598-ACE3-96867B2E18AD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C168B92-77ED-4D27-8F63-5DA68CBC0919}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C168B92-77ED-4D27-8F63-5DA68CBC0919}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C168B92-77ED-4D27-8F63-5DA68CBC0919}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C168B92-77ED-4D27-8F63-5DA68CBC0919}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ECF6F54E-FA5D-47E4-AAF0-4D38DE3B6E41} = {25FEA3F6-9975-48DD-A987-226BEF5BEE05}
+		{D2C4EDE0-55B1-4AB4-81BA-4295F8A100CE} = {25FEA3F6-9975-48DD-A987-226BEF5BEE05}
+		{3C168B92-77ED-4D27-8F63-5DA68CBC0919} = {25FEA3F6-9975-48DD-A987-226BEF5BEE05}
 	EndGlobalSection
 EndGlobal
