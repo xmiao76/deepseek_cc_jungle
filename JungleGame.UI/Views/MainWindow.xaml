@@ -8,13 +8,17 @@
         Background="#1E1E2E" Foreground="White">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Board -->
+        <!-- Board: the canvas keeps its 500×650 design size; the Viewbox scales
+             it uniformly to the available space so the board grows and shrinks
+             with the window at any resolution/DPI -->
         <Border Grid.Column="0" BorderBrush="#555" BorderThickness="1" Margin="0,0,10,0">
-            <Canvas x:Name="BoardCanvas" Width="500" Height="650" Background="#3D2B1F"/>
+            <Viewbox Stretch="Uniform">
+                <Canvas x:Name="BoardCanvas" Width="500" Height="650" Background="#3D2B1F"/>
+            </Viewbox>
         </Border>
 
         <!-- Side Panel -->

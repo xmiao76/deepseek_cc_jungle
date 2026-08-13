@@ -18,7 +18,7 @@ public class TranspositionTableTests
 
         tt.Store(hash, 5, 42, bestMove, BoundType.Exact);
 
-        Assert.True(tt.TryProbe(hash, 5, -10000, 10000, out int score, out Move probedMove));
+        Assert.True(tt.TryProbe(hash, 5, -10000, 10000, 0, out int score, out Move probedMove));
         Assert.Equal(42, score);
         Assert.Equal(bestMove, probedMove);
     }
@@ -34,7 +34,7 @@ public class TranspositionTableTests
 
         tt.Store(hash, 3, 42, bestMove, BoundType.Exact);
 
-        Assert.False(tt.TryProbe(hash, 5, -10000, 10000, out _, out _));
+        Assert.False(tt.TryProbe(hash, 5, -10000, 10000, 0, out _, out _));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class TranspositionTableTests
         tt.Store(hash, 5, 500, bestMove, BoundType.LowerBound);
 
         // Probe with beta <= 500 should return the lower-bound score
-        Assert.True(tt.TryProbe(hash, 5, -10000, 400, out int score, out _));
+        Assert.True(tt.TryProbe(hash, 5, -10000, 400, 0, out int score, out _));
         Assert.Equal(500, score);
     }
 
@@ -90,7 +90,7 @@ public class TranspositionTableTests
         tt.Store(hash, 5, -100, bestMove, BoundType.UpperBound);
 
         // Probe with alpha >= -100 should return the upper-bound score
-        Assert.True(tt.TryProbe(hash, 5, 0, 10000, out int score, out _));
+        Assert.True(tt.TryProbe(hash, 5, 0, 10000, 0, out int score, out _));
         Assert.Equal(-100, score);
     }
 }

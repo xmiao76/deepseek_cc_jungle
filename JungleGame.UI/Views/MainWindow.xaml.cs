@@ -15,18 +15,20 @@ public partial class MainWindow : Window
     private const int BoardRows = 9;
     private const double BoardMargin = 20;
 
-    public MainWindow(bool humanFirst = true, bool aiVsAi = false)
+    public MainWindow(bool humanFirst = true, bool aiVsAi = false, int aiTimeMs = 1000) // Medium difficulty
     {
         InitializeComponent();
-        _vm = new MainViewModel();
+        _vm = new MainViewModel(aiTimeMs);
         _vm.GameOver += OnGameOver;
         _vm.BoardChanged += RenderBoard;
         _vm.PropertyChanged += (_, e) =>
         {
+            // Property changes originate on the UI thread (the VM's async
+            // continuations capture the WPF SynchronizationContext)
             if (e.PropertyName == nameof(MainViewModel.AiThinking))
-                Dispatcher.Invoke(RenderBoard);
+                RenderBoard();
         };
-        _vm.StartGame(humanFirst, aiVsAi);
+        _vm.StartGame(humanFirst, aiVsAi, aiTimeMs);
         RenderBoard();
         UpdateUI();
     }
@@ -352,8 +354,8 @@ public partial class MainWindow : Window
             ? new Position(6 - visualPos.Col, 8 - visualPos.Row)
             : visualPos;
 
+        // HandleCellClick raises BoardChanged, which already re-renders the board
         _vm.HandleCellClick(logicalPos);
-        RenderBoard();
     }
 
     private void NewGame_Click(object sender, RoutedEventArgs e)
@@ -365,7 +367,7 @@ public partial class MainWindow : Window
         };
         if (dialog.ShowDialog() == true)
         {
-            _vm.StartGame(dialog.HumanFirst, dialog.AiVsAi);
+            _vm.StartGame(dialog.HumanFirst, dialog.AiVsAi, dialog.AiTimeMs);
             RenderBoard();
         }
     }
@@ -378,20 +380,17 @@ public partial class MainWindow : Window
 
     private void OnGameOver(GameStatus status)
     {
-        Dispatcher.Invoke(() =>
+        RenderBoard();
+        var dialog = new GameOverDialog(status)
         {
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _vm.StartNewGame();
             RenderBoard();
-            var dialog = new GameOverDialog(status)
-            {
-                Owner = this,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                _vm.StartNewGame();
-                RenderBoard();
-            }
-        });
+        }
     }
 
     private void UpdateUI()

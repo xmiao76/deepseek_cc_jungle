@@ -29,14 +29,15 @@ public static class CaptureResolver
         if (attacker.Animal == Animal.Elephant && defender.Animal == Animal.Rat)
             return false;
 
-        // Special case: Rat in water cannot be captured by any land piece
+        // Special case: Rat vs Rat is unconditional — a rat on land or in water
+        // may capture a rat on land or in water
+        if (attacker.Animal == Animal.Rat && defender.Animal == Animal.Rat)
+            return true;
+
+        // Special case: Rat in water cannot be captured by any other land piece
         if (defender.Animal == Animal.Rat && board.IsWater(defender.Position) &&
             !board.IsWater(attacker.Position))
             return false;
-
-        // Rat on land can capture rat in water, rat in water can capture rat in water
-        if (attacker.Animal == Animal.Rat && defender.Animal == Animal.Rat)
-            return true;
 
         // Standard rank-based capture
         return attackerEffectiveRank >= defenderEffectiveRank;

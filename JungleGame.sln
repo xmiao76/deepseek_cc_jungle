@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.UI", "JungleGame
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Tests", "JungleGame.Tests\JungleGame.Tests.csproj", "{467B7EC7-33E6-4166-8A52-4DECF2C4554A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JungleGame.Bench", "JungleGame.Bench\JungleGame.Bench.csproj", "{7CCE6E8C-EF1B-456C-9CFC-7EABB9FC1068}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{467B7EC7-33E6-4166-8A52-4DECF2C4554A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CCE6E8C-EF1B-456C-9CFC-7EABB9FC1068}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CCE6E8C-EF1B-456C-9CFC-7EABB9FC1068}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CCE6E8C-EF1B-456C-9CFC-7EABB9FC1068}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CCE6E8C-EF1B-456C-9CFC-7EABB9FC1068}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

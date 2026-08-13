@@ -6,7 +6,8 @@ public enum GameStatus
 {
     InProgress,
     BlueWins,
-    RedWins
+    RedWins,
+    Draw
 }
 
 public class GameState
@@ -17,6 +18,7 @@ public class GameState
     public GameStatus Status { get; }
     public ImmutableList<Piece> CapturedBlue { get; } // Pieces captured FROM Blue
     public ImmutableList<Piece> CapturedRed { get; }  // Pieces captured FROM Red
+    public ImmutableList<ulong> History { get; } // Zobrist hash after each applied move
 
     public GameState(
         Board board,
@@ -24,7 +26,8 @@ public class GameState
         Player currentTurn,
         GameStatus status,
         ImmutableList<Piece> capturedBlue,
-        ImmutableList<Piece> capturedRed)
+        ImmutableList<Piece> capturedRed,
+        ImmutableList<ulong>? history = null)
     {
         Board = board;
         Pieces = pieces;
@@ -32,6 +35,7 @@ public class GameState
         Status = status;
         CapturedBlue = capturedBlue;
         CapturedRed = capturedRed;
+        History = history ?? ImmutableList<ulong>.Empty;
     }
 
     public static GameState CreateInitial()
@@ -73,13 +77,20 @@ public class GameState
         pieces.Add(new Position(0, 8), new Piece(Animal.Lion, Player.Red, new Position(0, 8)));
         pieces.Add(new Position(6, 8), new Piece(Animal.Tiger, Player.Red, new Position(6, 8)));
 
+        var initialPieces = pieces.ToImmutable();
+
+        // Seed the repetition history with the opening position so a shuffle back
+        // to the start counts toward the three-fold draw
+        var history = ImmutableList.Create(Zobrist.ComputeHash(initialPieces, Player.Blue));
+
         return new GameState(
             Board.Initial,
-            pieces.ToImmutable(),
+            initialPieces,
             Player.Blue, // Blue moves first per standard rules
             GameStatus.InProgress,
             ImmutableList<Piece>.Empty,
-            ImmutableList<Piece>.Empty);
+            ImmutableList<Piece>.Empty,
+            history);
     }
 
     public Piece? GetPieceAt(Position pos) =>

@@ -10,4 +10,8 @@
     <PackageReference Include="System.Collections.Immutable" Version="10.0.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="JungleGame.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -6,6 +6,82 @@ namespace JungleGame.Tests.Engine;
 
 public class GameControllerTests
 {
+    private static GameState CreateState(Dictionary<Position, Piece> pieces, Player turn, GameStatus status)
+        => new(
+            Board.Initial,
+            System.Collections.Immutable.ImmutableDictionary.CreateRange(pieces),
+            turn,
+            status,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty);
+
+    private static Move FindMove(GameState state, Position from, Position to)
+        => MoveGenerator.GenerateLegalMoves(state, state.CurrentTurn).First(m => m.From == from && m.To == to);
+
+    [Fact]
+    public void ApplyMove_Throws_WhenGameOver()
+    {
+        var terminal = CreateState(new Dictionary<Position, Piece>
+        {
+            [new Position(0, 0)] = new Piece(Animal.Lion, Player.Blue, new Position(0, 0)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        }, Player.Blue, GameStatus.BlueWins);
+
+        var move = new Move(new Position(0, 0), new Position(1, 0));
+        Assert.Throws<InvalidOperationException>(() => GameController.ApplyMove(terminal, move));
+    }
+
+    [Fact]
+    public void ApplyMove_DetectsThreeFoldRepetition_AsDraw()
+    {
+        // Wolf and Rat shuffle back and forth. Each full cycle returns to the
+        // starting position; the third occurrence is a draw.
+        var state = CreateState(new Dictionary<Position, Piece>
+        {
+            [new Position(3, 3)] = new Piece(Animal.Wolf, Player.Blue, new Position(3, 3)),
+            [new Position(0, 3)] = new Piece(Animal.Rat, Player.Red, new Position(0, 3))
+        }, Player.Blue, GameStatus.InProgress);
+
+        void ShuffleCycle()
+        {
+            state = GameController.ApplyMove(state, FindMove(state, new Position(3, 3), new Position(3, 2)));
+            state = GameController.ApplyMove(state, FindMove(state, new Position(0, 3), new Position(0, 2)));
+            state = GameController.ApplyMove(state, FindMove(state, new Position(3, 2), new Position(3, 3)));
+            state = GameController.ApplyMove(state, FindMove(state, new Position(0, 2), new Position(0, 3)));
+        }
+
+        ShuffleCycle();
+        ShuffleCycle();
+        Assert.Equal(GameStatus.InProgress, state.Status);
+
+        // Every position in the cycle occurs once per cycle, so the first move
+        // of the third cycle reaches its third occurrence and is a draw.
+        state = GameController.ApplyMove(state, FindMove(state, new Position(3, 3), new Position(3, 2)));
+        Assert.Equal(GameStatus.Draw, state.Status);
+
+        // And no further moves may be applied to a finished game
+        Assert.Throws<InvalidOperationException>(
+            () => GameController.ApplyMove(state, new Move(new Position(0, 3), new Position(0, 2))));
+    }
+
+    [Fact]
+    public void Position_WithNoLegalMoves_IsLossForSideToMove()
+    {
+        // Blue Wolf is boxed in by two Red Elephants (uncapturable) and water.
+        // After Red's move, Blue has no legal moves and loses.
+        var state = CreateState(new Dictionary<Position, Piece>
+        {
+            [new Position(3, 3)] = new Piece(Animal.Wolf, Player.Blue, new Position(3, 3)),
+            [new Position(3, 2)] = new Piece(Animal.Elephant, Player.Red, new Position(3, 2)),
+            [new Position(3, 4)] = new Piece(Animal.Elephant, Player.Red, new Position(3, 4)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        }, Player.Red, GameStatus.InProgress);
+
+        state = GameController.ApplyMove(state, new Move(new Position(0, 8), new Position(0, 7)));
+
+        Assert.Equal(GameStatus.RedWins, state.Status);
+    }
+
     [Fact]
     public void ApplyMove_ChangesTurn()
     {

@@ -13,7 +13,8 @@ public partial class App : Application
         {
             var mainWindow = new MainWindow(
                 startDialog.HumanFirst,
-                startDialog.AiVsAi);
+                startDialog.AiVsAi,
+                startDialog.AiTimeMs);
             mainWindow.Show();
         }
         else

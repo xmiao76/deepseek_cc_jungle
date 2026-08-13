@@ -30,33 +30,16 @@ public readonly struct TTEntry
 
 public class TranspositionTable
 {
+    /// <summary>
+    /// Mate-score convention: scores at or beyond ±(MateScore - MateRange) are mate
+    /// scores. They are stored node-relative ("mate in k plies from this position")
+    /// and converted to root-relative on probe, using the probe node's ply.
+    /// </summary>
+    public const int MateScore = 1_000_000;
+    public const int MateRange = 500; // search ply (64 + qsearch 32) is far below this
+
     private readonly TTEntry[] _table;
     private readonly int _size;
-
-    // Zobrist keys
-    private static readonly ulong[,] PieceKeys;
-    private static readonly ulong TurnKey;
-    private static readonly Random _rng;
-    private const int PositionCount = 63; // 7×9
-
-    static TranspositionTable()
-    {
-        _rng = new Random(42); // Fixed seed for reproducibility
-        PieceKeys = new ulong[PositionCount, 16]; // 8 animals × 2 owners
-
-        for (int p = 0; p < PositionCount; p++)
-            for (int i = 0; i < 16; i++)
-                PieceKeys[p, i] = NextULong();
-
-        TurnKey = NextULong();
-    }
-
-    private static ulong NextULong()
-    {
-        byte[] buf = new byte[8];
-        _rng.NextBytes(buf);
-        return BitConverter.ToUInt64(buf, 0);
-    }
 
     public TranspositionTable(int size = 1 << 20) // 1M entries default
     {
@@ -64,24 +47,7 @@ public class TranspositionTable
         _table = new TTEntry[_size];
     }
 
-    private static int PieceIndex(Piece piece) => ((int)piece.Animal - 1) * 2 + (int)piece.Owner;
-    private static int PositionIndex(Position pos) => pos.Row * 7 + pos.Col;
-
-    public static ulong ComputeHash(GameState state)
-    {
-        ulong hash = 0;
-
-        foreach (var kv in state.Pieces)
-        {
-            int posIdx = PositionIndex(kv.Key);
-            int pieceIdx = PieceIndex(kv.Value);
-            hash ^= PieceKeys[posIdx, pieceIdx];
-        }
-
-        hash ^= TurnKey; // Include side to move
-
-        return hash;
-    }
+    public static ulong ComputeHash(GameState state) => Zobrist.ComputeHash(state);
 
     public void Store(ulong hash, int depth, int score, Move bestMove, BoundType bound)
     {
@@ -89,7 +55,7 @@ public class TranspositionTable
         _table[idx] = new TTEntry(hash, depth, score, bestMove, bound);
     }
 
-    public bool TryProbe(ulong hash, int depth, int alpha, int beta, out int score, out Move bestMove)
+    public bool TryProbe(ulong hash, int depth, int alpha, int beta, int ply, out int score, out Move bestMove)
     {
         int idx = (int)(hash % (ulong)_size);
         var entry = _table[idx];
@@ -102,28 +68,36 @@ public class TranspositionTable
 
         bestMove = entry.BestMove;
 
-        if (entry.Depth >= depth)
+        if (entry.Depth < depth)
+            return false;
+
+        // Convert stored node-relative mate scores to root-relative before the
+        // bound comparisons, so cutoffs decide on the true value.
+        int s = entry.Score;
+        if (s > MateScore - MateRange)
+            s -= ply;
+        else if (s < -(MateScore - MateRange))
+            s += ply;
+
+        switch (entry.Bound)
         {
-            switch (entry.Bound)
-            {
-                case BoundType.Exact:
-                    score = entry.Score;
+            case BoundType.Exact:
+                score = s;
+                return true;
+            case BoundType.LowerBound:
+                if (s >= beta)
+                {
+                    score = s;
                     return true;
-                case BoundType.LowerBound:
-                    if (entry.Score >= beta)
-                    {
-                        score = entry.Score;
-                        return true;
-                    }
-                    break;
-                case BoundType.UpperBound:
-                    if (entry.Score <= alpha)
-                    {
-                        score = entry.Score;
-                        return true;
-                    }
-                    break;
-            }
+                }
+                break;
+            case BoundType.UpperBound:
+                if (s <= alpha)
+                {
+                    score = s;
+                    return true;
+                }
+                break;
         }
 
         return false;

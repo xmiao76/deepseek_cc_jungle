@@ -22,19 +22,16 @@ public class MainViewModel : INotifyPropertyChanged
     private CancellationTokenSource? _aiCts;
     private readonly List<string> _moveHistory = new();
 
-    public MainViewModel()
+    public MainViewModel(int aiTimeMs = 1000) // Medium difficulty
     {
         _state = GameState.CreateInitial();
-        _ai = new MinimaxEngine(TimeSpan.FromSeconds(2));
+        _ai = new MinimaxEngine(TimeSpan.FromMilliseconds(aiTimeMs));
         _isHumanTurn = true;
         NewGameCommand = new RelayCommand(_ => StartNewGame());
         FlipBoardCommand = new RelayCommand(_ => ToggleFlip());
     }
 
     public GameState State => _state;
-
-    public Player HumanPlayer => _boardFlipped ? Player.Red : Player.Blue;
-    public Player AIPlayer => HumanPlayer.Opponent();
 
     public bool IsHumanTurn
     {
@@ -45,19 +42,19 @@ public class MainViewModel : INotifyPropertyChanged
     public bool BoardFlipped
     {
         get => _boardFlipped;
-        set { _boardFlipped = value; OnPropertyChanged(); OnPropertyChanged(nameof(HumanPlayer)); }
+        set { _boardFlipped = value; OnPropertyChanged(); }
     }
 
     public bool AiVsAi
     {
         get => _aiVsAi;
-        set { _aiVsAi = value; }
+        set { _aiVsAi = value; OnPropertyChanged(); }
     }
 
     public bool HumanFirst
     {
         get => _humanFirst;
-        set { _humanFirst = value; }
+        set { _humanFirst = value; OnPropertyChanged(); }
     }
 
     public bool AiThinking
@@ -86,19 +83,20 @@ public class MainViewModel : INotifyPropertyChanged
                 return "Blue wins!";
             if (_state.Status == GameStatus.RedWins)
                 return "Red wins!";
+            if (_state.Status == GameStatus.Draw)
+                return "Draw";
             if (_aiThinking)
                 return "AI thinking...";
             return $"{_state.CurrentTurn}'s turn";
         }
     }
 
-    public string TurnIndicator => IsHumanTurn ? "Your turn" : "AI's turn";
+    public string TurnIndicator => _aiVsAi
+        ? $"{_state.CurrentTurn}'s turn"
+        : IsHumanTurn ? "Your turn" : "AI's turn";
 
     public int BlueCapturedCount => _state.CapturedBlue.Count;
     public int RedCapturedCount => _state.CapturedRed.Count;
-
-    public ObservableCollection<string> CapturedBlueDisplay => new(_state.CapturedBlue.Select(p => AnimalName(p.Animal)));
-    public ObservableCollection<string> CapturedRedDisplay => new(_state.CapturedRed.Select(p => AnimalName(p.Animal)));
 
     public List<string> MoveHistory => _moveHistory;
 
@@ -108,7 +106,6 @@ public class MainViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action<GameStatus>? GameOver;
     public event Action? BoardChanged;
-    public event Action? AIThinkingChanged;
 
     public void StartNewGame()
     {
@@ -118,30 +115,32 @@ public class MainViewModel : INotifyPropertyChanged
         LegalMoves = new HashSet<Position>();
         _moveHistory.Clear();
 
-        if (_humanFirst)
-        {
-            IsHumanTurn = true;
-        }
-        else
+        if (!_humanFirst || _aiVsAi)
         {
             IsHumanTurn = false;
             _ = DoAIMove();
+        }
+        else
+        {
+            IsHumanTurn = true;
         }
 
         NotifyAll();
     }
 
-    public void StartGame(bool humanFirst, bool aiVsAi)
+    public void StartGame(bool humanFirst, bool aiVsAi, int aiTimeMs = 1000) // Medium difficulty
     {
         _humanFirst = humanFirst;
         _aiVsAi = aiVsAi;
+        _ai.SetTimeLimit(TimeSpan.FromMilliseconds(aiTimeMs));
         StartNewGame();
     }
 
     public void HandleCellClick(Position pos)
     {
         if (_state.Status != GameStatus.InProgress) return;
-        if (!_isHumanTurn && !_aiVsAi) return;
+        if (_aiVsAi) return; // Watch mode: the AI plays both sides
+        if (!_isHumanTurn) return;
         if (_aiThinking) return;
 
         if (_selectedPosition == null)
@@ -222,33 +221,55 @@ public class MainViewModel : INotifyPropertyChanged
         AiThinking = true;
         NotifyAll();
 
+        var continueChain = false;
+
         try
         {
-            var move = await Task.Run(() => _ai.FindBestMove(_state), token);
+            var move = await Task.Run(() => _ai.FindBestMove(_state, token), token);
 
             if (token.IsCancellationRequested) return;
 
-            _state = GameController.ApplyMove(_state, move);
-            _moveHistory.Add($"(AI) {move}");
+            if (move == null)
+            {
+                // Unreachable through normal play (ApplyMove already declares a
+                // terminal status before the AI's turn), but never leave the game
+                // hanging: the AI cannot move, so the human wins.
+                GameOver?.Invoke(GameStatus.BlueWins);
+                return;
+            }
+
+            _state = GameController.ApplyMove(_state, move.Value);
+            _moveHistory.Add($"(AI) {move.Value}");
 
             if (_state.Status != GameStatus.InProgress)
             {
+                // Clear the thinking indicator before the game-over dialog opens
+                AiThinking = false;
+                NotifyAll();
                 GameOver?.Invoke(_state.Status);
             }
             else
             {
                 IsHumanTurn = !_aiVsAi;
+                continueChain = _aiVsAi;
             }
         }
         catch (Exception ex)
         {
+            // Never leave the game hung: log and hand the turn back to the human
             System.Diagnostics.Debug.WriteLine($"AI error: {ex.Message}");
+            System.Diagnostics.Trace.TraceError($"AI error: {ex}");
+            IsHumanTurn = true;
         }
         finally
         {
             AiThinking = false;
             NotifyAll();
         }
+
+        // Watch mode: chain the opponent's move so the game plays itself to completion
+        if (continueChain)
+            _ = DoAIMove();
     }
 
     public void ToggleFlip()

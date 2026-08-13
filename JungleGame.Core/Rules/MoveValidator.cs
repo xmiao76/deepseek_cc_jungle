@@ -71,12 +71,13 @@ public static class MoveValidator
         if (piece.Animal != Animal.Lion && piece.Animal != Animal.Tiger)
             return "Only Lion and Tiger can jump across rivers.";
 
-        bool isHorizontal = dRow != 0;
-        bool isVertical = dCol != 0;
+        bool isRowChange = dRow != 0;
+        bool isColChange = dCol != 0;
 
-        // Tiger cannot jump horizontally (along rows)
-        if (isHorizontal && piece.Animal == Animal.Tiger)
-            return "Tiger cannot jump horizontally across the river.";
+        // Tiger cannot jump along rows (a row-changing jump crosses the 3-tall
+        // river body; Tigers only get the 2-wide column-changing jump)
+        if (isRowChange && piece.Animal == Animal.Tiger)
+            return "Tiger cannot jump along rows across the river.";
 
         // Determine the water squares that would be crossed
         var waterSquares = GetJumpWaterSquares(from, to, dCol, dRow);
@@ -117,21 +118,23 @@ public static class MoveValidator
     }
 
     /// <summary>
-    /// Returns the list of water squares crossed by a jump, or null if the jump is invalid.
+    /// Returns the water squares crossed by a jump, or an empty list if none.
     /// Jumps go from one bank, across all water squares, landing on the opposite bank.
     ///
     /// On the standard 7×9 board:
     /// Left river: cols 1-2, rows 3-5 (2 wide × 3 tall)
     /// Right river: cols 4-5, rows 3-5
     ///
-    /// Horizontal jump: crosses the river height (across rows, 3 water squares), from row 2→6 or 6→2
-    /// Vertical jump: crosses the river width (across columns, 2 water squares), from col 0→3 or 3→0 or 3→6 or 6→3
+    /// Row-changing jump (dRow != 0): crosses the 3-tall river (3 water squares),
+    /// from row 2→6 or 6→2 (Lion only).
+    /// Column-changing jump (dCol != 0): crosses the 2-wide river (2 water squares),
+    /// col 0↔3 or 3↔6 (Lion and Tiger).
     /// </summary>
     private static List<Position>? GetJumpWaterSquares(Position from, Position to, int dCol, int dRow)
     {
         var squares = new List<Position>();
 
-        if (dCol != 0) // Vertical jump (along columns)
+        if (dCol != 0) // Column-changing jump
         {
             int step = Math.Sign(dCol);
             int col = from.Col + step;
@@ -143,7 +146,7 @@ public static class MoveValidator
                 col += step;
             }
         }
-        else if (dRow != 0) // Horizontal jump (along rows)
+        else if (dRow != 0) // Row-changing jump
         {
             int step = Math.Sign(dRow);
             int col = from.Col;

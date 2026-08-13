@@ -65,7 +65,7 @@ public class RiverJumpTests
 
         var result = MoveValidator.Validate(state, new Position(1, 2), new Position(1, 6));
         Assert.NotNull(result);
-        Assert.Contains("horizontally", result);
+        Assert.Contains("along rows", result);
     }
 
     [Fact]

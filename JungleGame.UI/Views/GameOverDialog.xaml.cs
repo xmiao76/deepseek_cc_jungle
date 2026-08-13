@@ -12,6 +12,8 @@ public partial class GameOverDialog : Window
             ResultText.Text = "Blue Wins!";
         else if (status == GameStatus.RedWins)
             ResultText.Text = "Red Wins!";
+        else if (status == GameStatus.Draw)
+            ResultText.Text = "Draw";
     }
 
     private void NewGame_Click(object sender, RoutedEventArgs e)

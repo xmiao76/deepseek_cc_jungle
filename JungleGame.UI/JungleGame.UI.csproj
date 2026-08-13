@@ -10,6 +10,30 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Version>1.1.0</Version>
   </PropertyGroup>
+
+  <!-- WPF native libraries are embedded as resources and extracted to a temp
+       directory at startup (see NativeLibraryExtractor) so the published
+       output is a true single EXE. The runtime pack copies them loose as well;
+       exclude those copies from the publish output. -->
+  <ItemGroup>
+    <EmbeddedResource Include="NativeLibs\D3DCompiler_47_cor3.dll" LogicalName="native.D3DCompiler_47_cor3.dll" />
+    <EmbeddedResource Include="NativeLibs\PenImc_cor3.dll" LogicalName="native.PenImc_cor3.dll" />
+    <EmbeddedResource Include="NativeLibs\PresentationNative_cor3.dll" LogicalName="native.PresentationNative_cor3.dll" />
+    <EmbeddedResource Include="NativeLibs\vcruntime140_cor3.dll" LogicalName="native.vcruntime140_cor3.dll" />
+    <EmbeddedResource Include="NativeLibs\wpfgfx_cor3.dll" LogicalName="native.wpfgfx_cor3.dll" />
+  </ItemGroup>
+
+  <Target Name="ExcludeWpfNativeLibsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="'%(ResolvedFileToPublish.FileName)' == 'D3DCompiler_47_cor3'
+                or '%(ResolvedFileToPublish.FileName)' == 'PenImc_cor3'
+                or '%(ResolvedFileToPublish.FileName)' == 'PresentationNative_cor3'
+                or '%(ResolvedFileToPublish.FileName)' == 'vcruntime140_cor3'
+                or '%(ResolvedFileToPublish.FileName)' == 'wpfgfx_cor3'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

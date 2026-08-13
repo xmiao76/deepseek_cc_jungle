@@ -38,7 +38,12 @@ public class Board
         }
     }
 
-    public Terrain GetTerrain(Position pos) => TerrainGrid[pos.Col, pos.Row];
+    public Terrain GetTerrain(Position pos)
+    {
+        if (!pos.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(pos), pos, "Position is outside the 7×9 board.");
+        return TerrainGrid[pos.Col, pos.Row];
+    }
 
     public bool IsRiver(Position pos) => GetTerrain(pos) == Terrain.River;
     public bool IsTrap(Position pos, Player player) =>

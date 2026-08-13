@@ -53,10 +53,15 @@ public class FullGameTests
         while (state.Status == GameStatus.InProgress && moveCount < maxMoves)
         {
             var move = engine.FindBestMove(state);
-            var error = JungleGame.Core.Rules.MoveValidator.Validate(state, move.From, move.To);
+            if (move == null)
+            {
+                Assert.Fail($"AI returned no move for {state.CurrentTurn} at move {moveCount}");
+            }
+
+            var error = JungleGame.Core.Rules.MoveValidator.Validate(state, move.Value.From, move.Value.To);
             Assert.Null(error);
 
-            state = GameController.ApplyMove(state, move);
+            state = GameController.ApplyMove(state, move.Value);
             moveCount++;
         }
 
@@ -75,12 +80,31 @@ public class FullGameTests
     [Fact]
     public void ElectricRat_CannotCaptureElephant_FromWater()
     {
-        // Verify the rat-in-water restriction is enforced in a full game scenario
-        var state = GameState.CreateInitial();
-        // Move Blue Rat into water and try to capture Red Elephant
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(2));
-        var move = engine.FindBestMove(state);
-        // This just verifies the AI doesn't crash
-        // (Move is a value type, so it's never null)
+        // Direct rule check: a rat in water cannot strike an elephant on land
+        var ratInWater = new Piece(Animal.Rat, Player.Blue, new Position(1, 3));
+        var elephantOnLand = new Piece(Animal.Elephant, Player.Red, new Position(1, 2));
+        Assert.True(Board.Initial.IsWater(ratInWater.Position));
+        Assert.False(JungleGame.Core.Rules.CaptureResolver.CanCapture(ratInWater, elephantOnLand, Board.Initial));
+
+        // In-game: the capture move must not be generated, while the rat still
+        // has its other water moves
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(1, 3)] = ratInWater,
+            [new Position(1, 2)] = elephantOnLand,
+            [new Position(0, 0)] = new Piece(Animal.Lion, Player.Blue, new Position(0, 0)),
+            [new Position(6, 8)] = new Piece(Animal.Wolf, Player.Red, new Position(6, 8))
+        };
+        var state = new GameState(
+            Board.Initial,
+            System.Collections.Immutable.ImmutableDictionary.CreateRange(pieces),
+            Player.Blue,
+            GameStatus.InProgress,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty);
+
+        var moves = MoveGenerator.GenerateLegalMoves(state, Player.Blue);
+        Assert.DoesNotContain(moves, m => m.From == new Position(1, 3) && m.To == new Position(1, 2));
+        Assert.Contains(moves, m => m.From == new Position(1, 3) && m.To == new Position(1, 4));
     }
 }

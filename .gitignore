@@ -1,11 +1,12 @@
 /.claude
+/JungleGame.Core/bin
 /JungleGame.Core/obj
 /JungleGame.Tests/bin
 /JungleGame.Tests/obj
+/JungleGame.Tests/TestResults
 /JungleGame.UI/bin
 /JungleGame.UI/obj
+/JungleGame.Bench/bin
+/JungleGame.Bench/obj
 *.dll
-/JungleGame.Core/bin
-/JungleGame.Core/bin
 *.exe
-/JungleGame.Core/bin
