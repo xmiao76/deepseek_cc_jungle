@@ -6,7 +6,7 @@ namespace JungleGame.UI.Views;
 public partial class StartDialog : Window
 {
     public bool HumanFirst { get; private set; } = true;
-    public bool AiVsAi { get; private set; } = false;
+    public bool AiVsAi { get; private set; }
     public int AiTimeMs { get; private set; } = 1000; // Medium
 
     public StartDialog()

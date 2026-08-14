@@ -7,9 +7,9 @@ namespace JungleGame.Tests.Rules;
 
 public class MoveValidatorTests
 {
-    private GameState GetInitialState() => GameState.CreateInitial();
+    private static GameState GetInitialState() => GameState.CreateInitial();
 
-    private GameState CreateCustomState(Dictionary<Position, Piece> pieces, Player turn)
+    private static GameState CreateCustomState(Dictionary<Position, Piece> pieces, Player turn)
     {
         var immutablePieces = System.Collections.Immutable.ImmutableDictionary.CreateRange(pieces);
         return new GameState(
@@ -132,6 +132,127 @@ public class MoveValidatorTests
         };
         var state = CreateCustomState(pieces, Player.Blue);
         // Blue Lion at (3,3) tries to move onto Blue Cat at (3,4)
+        var result = MoveValidator.Validate(state, new Position(3, 3), new Position(3, 4));
+        Assert.NotNull(result);
+        Assert.Contains("capture", result);
+    }
+
+    [Fact]
+    public void EmptySource_IsIllegal()
+    {
+        var state = GetInitialState();
+        var result = MoveValidator.Validate(state, new Position(3, 4), new Position(3, 5));
+        Assert.NotNull(result);
+        Assert.Contains("No piece", result);
+    }
+
+    [Fact]
+    public void FinishedGame_IsIllegal()
+    {
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(0, 0)] = new Piece(Animal.Lion, Player.Blue, new Position(0, 0))
+        };
+        var state = new GameState(
+            Board.Initial,
+            System.Collections.Immutable.ImmutableDictionary.CreateRange(pieces),
+            Player.Blue,
+            GameStatus.BlueWins,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty,
+            System.Collections.Immutable.ImmutableList<Piece>.Empty);
+        var result = MoveValidator.Validate(state, new Position(0, 0), new Position(0, 1));
+        Assert.NotNull(result);
+        Assert.Contains("over", result);
+    }
+
+    [Fact]
+    public void NonJumpAnimal_CannotJump()
+    {
+        // Wolf at (3,3) tries a distance-2 move (a jump distance)
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(3, 3)] = new Piece(Animal.Wolf, Player.Blue, new Position(3, 3)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
+        var result = MoveValidator.Validate(state, new Position(3, 3), new Position(3, 5));
+        Assert.NotNull(result);
+        Assert.Contains("Lion and Tiger", result);
+    }
+
+    [Fact]
+    public void Tiger_CannotJumpAlongRows()
+    {
+        // Tiger at (1,2) tries the 3-tall row-changing jump across the river
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(1, 2)] = new Piece(Animal.Tiger, Player.Blue, new Position(1, 2)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
+        var result = MoveValidator.Validate(state, new Position(1, 2), new Position(1, 6));
+        Assert.NotNull(result);
+        Assert.Contains("Tiger", result);
+    }
+
+    [Fact]
+    public void JumpOverLand_IsIllegal()
+    {
+        // Lion at (0,2) tries a column jump to (3,2); the crossed squares are land
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(0, 2)] = new Piece(Animal.Lion, Player.Blue, new Position(0, 2)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
+        var result = MoveValidator.Validate(state, new Position(0, 2), new Position(3, 2));
+        Assert.NotNull(result);
+        Assert.Contains("water", result);
+    }
+
+    [Fact]
+    public void JumpLandingInWater_IsIllegal()
+    {
+        // Lion at (1,2) jumps down to (1,5) — the crossed squares are water but
+        // the landing square is also water
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(1, 2)] = new Piece(Animal.Lion, Player.Blue, new Position(1, 2)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
+        var result = MoveValidator.Validate(state, new Position(1, 2), new Position(1, 5));
+        Assert.NotNull(result);
+        Assert.Contains("land", result);
+    }
+
+    [Fact]
+    public void JumpBlockedByRatInWater_IsIllegal()
+    {
+        // Lion at (1,2) would jump to (1,6), but a Red Rat sits mid-river at (1,4)
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(1, 2)] = new Piece(Animal.Lion, Player.Blue, new Position(1, 2)),
+            [new Position(1, 4)] = new Piece(Animal.Rat, Player.Red, new Position(1, 4)),
+            [new Position(0, 8)] = new Piece(Animal.Cat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
+        var result = MoveValidator.Validate(state, new Position(1, 2), new Position(1, 6));
+        Assert.NotNull(result);
+        Assert.Contains("rat", result);
+    }
+
+    [Fact]
+    public void WeakerPiece_CannotCaptureStronger()
+    {
+        // Blue Wolf tries to capture a Red Elephant on adjacent land
+        var pieces = new Dictionary<Position, Piece>
+        {
+            [new Position(3, 3)] = new Piece(Animal.Wolf, Player.Blue, new Position(3, 3)),
+            [new Position(3, 4)] = new Piece(Animal.Elephant, Player.Red, new Position(3, 4)),
+            [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
+        };
+        var state = CreateCustomState(pieces, Player.Blue);
         var result = MoveValidator.Validate(state, new Position(3, 3), new Position(3, 4));
         Assert.NotNull(result);
         Assert.Contains("capture", result);

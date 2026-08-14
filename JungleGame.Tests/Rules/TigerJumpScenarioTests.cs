@@ -142,7 +142,7 @@ public class TigerJumpScenarioTests
         Assert.NotEmpty(jumpTargets);
     }
 
-    private GameState CreateCustomState(Dictionary<Position, Piece> pieces, Player turn)
+    private static GameState CreateCustomState(Dictionary<Position, Piece> pieces, Player turn)
     {
         var immutablePieces = System.Collections.Immutable.ImmutableDictionary.CreateRange(pieces);
         return new GameState(

@@ -37,6 +37,7 @@ internal sealed class SearchBoard
     internal const byte NoWinner = 255;
     internal const int DistinctPieceKinds = 16; // 8 animals × 2 owners
     internal const int MaxPieceIds = 32;        // up to 2 copies of each kind
+    internal const int MaxMovesPerPly = 128;    // 16 pieces × (4 steps + 2 jumps) = 96 max
 
     // Terrain codes
     private const byte Land = 0;
@@ -229,6 +230,10 @@ internal sealed class SearchBoard
         return onEnemyTrap ? 0 : RankOf[id];
     }
 
+    /// <summary>True when the square is a trap of the given side's opponent.</summary>
+    internal static bool IsEnemyTrapSquare(int sq, int side) =>
+        side == 0 ? TerrainOf[sq] == TrapRed : TerrainOf[sq] == TrapBlue;
+
     /// <summary>Mirror of CaptureResolver.CanCapture (kept in sync by differential tests).</summary>
     public static bool CanCapture(byte attackerId, int attackerSq, byte defenderId, int defenderSq)
     {
@@ -320,6 +325,16 @@ internal sealed class SearchBoard
         CopyTo(board);
         return board;
     }
+
+    /// <summary>Flips the side to move without a piece move (null-move pruning).</summary>
+    public void MakeNullMove()
+    {
+        _turn = (byte)(_turn ^ 1);
+        Hash ^= Zobrist.TurnKey;
+    }
+
+    /// <summary>Undoes <see cref="MakeNullMove"/>.</summary>
+    public void UnmakeNullMove() => MakeNullMove();
 
     public void ApplyMove(in SearchMove m)
     {
@@ -433,7 +448,7 @@ internal sealed class SearchBoard
         // Reuse the instance scratch buffer; callers never nest CountLegalMoves
         return GenerateMoves(side, _scratch);
     }
-    private readonly SearchMove[] _scratch = new SearchMove[128];
+    private readonly SearchMove[] _scratch = new SearchMove[MaxMovesPerPly];
 
     private bool TryMakeMove(int side, byte id, byte from, byte to, out SearchMove m)
     {

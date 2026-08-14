@@ -56,6 +56,4 @@ public class Board
         (GetTerrain(pos) == Terrain.DenBlue && player == Player.Red) ||
         (GetTerrain(pos) == Terrain.DenRed && player == Player.Blue);
     public bool IsWater(Position pos) => GetTerrain(pos) == Terrain.River;
-
-    public bool IsValidPosition(Position pos) => pos.IsValid;
 }

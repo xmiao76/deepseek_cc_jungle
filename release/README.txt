@@ -34,11 +34,14 @@ Game Rules
 Controls
 --------
 - Click a piece to select it, then click a highlighted destination to move
+- Keyboard: arrow keys move the cursor on the board, Enter/Space selects or
+  moves, Escape deselects
 - Blue moves first (bottom), Red moves second (top)
 - "Flip Board (180°)" rotates the view (display only)
 - "New Game" opens the setup dialog again; starting a new game cancels the
   AI's in-progress thinking immediately
 - The board scales with the window at any resolution or DPI setting
+- The last move is highlighted in gold; piece moves are animated
 
 AI Difficulty
 -------------
@@ -49,9 +52,11 @@ AI Difficulty
 Notes
 -----
 - The AI uses iterative-deepening alpha-beta search (PVS) with aspiration
-  windows, late move reductions, killer/history move ordering, quiescence
-  search, a transposition table, mate-distance scoring, and repetition
-  detection. It typically reaches 10-11 plies in 2 seconds.
+  windows, late move reductions, null-move and futility pruning, killer/history
+  move ordering, quiescence search, a bucketed transposition table,
+  mate-distance scoring, repetition detection, and positional evaluation terms
+  for den threats, trap handling, and river play. It typically reaches 11+
+  plies in 2 seconds.
 - The difficulty setting only changes the per-move time budget; the engine
   keeps its search memory across games.
 - Game saves are not supported in this version.

@@ -4,40 +4,52 @@
         Title="Jungle Game — New Game"
         SizeToContent="WidthAndHeight"
         ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-        Background="#1E1E2E" Foreground="White">
+        Icon="/Assets/jungle.ico"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}">
     <StackPanel Margin="30" VerticalAlignment="Center">
         <TextBlock Text="Jungle (Dou Shou Qi)" FontSize="24" FontWeight="Bold"
                    HorizontalAlignment="Center" Margin="0,0,0,20"
-                   Foreground="#FFD700"/>
+                   Foreground="{StaticResource GoldBrush}"/>
 
         <TextBlock Text="Who moves first?" FontSize="14" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
             <RadioButton x:Name="HumanFirstRadio" Content="You (Human)" IsChecked="True"
-                         FontSize="13" Margin="10,0" Foreground="White"/>
+                         GroupName="First" Margin="10,0"
+                         AutomationProperties.Name="Human moves first"/>
             <RadioButton x:Name="AIFirstRadio" Content="AI Computer"
-                         FontSize="13" Margin="10,0" Foreground="White"/>
+                         GroupName="First" Margin="10,0"
+                         AutomationProperties.Name="AI moves first"/>
         </StackPanel>
 
         <TextBlock Text="AI difficulty" FontSize="14" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-            <RadioButton x:Name="EasyRadio" Content="Easy (fast)" FontSize="13"
-                         Margin="10,0" Foreground="White"/>
+            <RadioButton x:Name="EasyRadio" Content="Easy (fast)"
+                         GroupName="Difficulty" Margin="10,0"
+                         AutomationProperties.Name="Easy difficulty"/>
             <RadioButton x:Name="MediumRadio" Content="Medium (1s)" IsChecked="True"
-                         FontSize="13" Margin="10,0" Foreground="White"/>
-            <RadioButton x:Name="HardRadio" Content="Hard (2s)" FontSize="13"
-                         Margin="10,0" Foreground="White"/>
+                         GroupName="Difficulty" Margin="10,0"
+                         AutomationProperties.Name="Medium difficulty"/>
+            <RadioButton x:Name="HardRadio" Content="Hard (2s)"
+                         GroupName="Difficulty" Margin="10,0"
+                         AutomationProperties.Name="Hard difficulty"/>
         </StackPanel>
 
         <CheckBox x:Name="AiVsAiCheck" Content="AI vs AI (watch mode)"
-                  FontSize="13" Margin="10,0,0,20" Foreground="White"/>
+                  Margin="10,0,0,20"
+                  AutomationProperties.Name="AI versus AI watch mode"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Content="Start Game" Click="Start_Click" Width="120" Height="35"
-                    Margin="10" FontSize="14" Background="#4CAF50" Foreground="White"
-                    BorderThickness="0" Cursor="Hand"/>
+                    Margin="10" Padding="12,0"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    IsDefault="True"
+                    AutomationProperties.Name="Start game"/>
             <Button Content="Cancel" Click="Cancel_Click" Width="80" Height="35"
-                    Margin="10" FontSize="14" Background="#555" Foreground="White"
-                    BorderThickness="0" Cursor="Hand"/>
+                    Margin="10" Padding="12,0"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    IsCancel="True"
+                    AutomationProperties.Name="Cancel"/>
         </StackPanel>
     </StackPanel>
 </Window>

@@ -6,7 +6,7 @@ namespace JungleGame.Tests.Rules;
 
 public class CaptureResolverTests
 {
-    private Board Board => Board.Initial;
+    private static Board Board => Board.Initial;
 
     [Fact]
     public void HigherRank_Captures_LowerRank()

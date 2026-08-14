@@ -20,7 +20,7 @@ public class MinimaxEngineTests
     public void AI_ProducesLegalMove()
     {
         var state = GameState.CreateInitial();
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5));
+        var engine = new MinimaxEngine(TimeSpan.FromSeconds(2));
         var move = engine.FindBestMove(state);
 
         // The move must be legal
@@ -77,7 +77,7 @@ public class MinimaxEngineTests
             $"Elephant on enemy trap ({onTrapEval}) should score below off-trap ({offTrapEval})");
 
         // The engine must produce a legal move and not voluntarily walk onto the trap
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5));
+        var engine = new MinimaxEngine(TimeSpan.FromSeconds(2));
         var move = engine.FindBestMove(offTrap);
 
         Assert.NotNull(move);
@@ -102,7 +102,7 @@ public class MinimaxEngineTests
 
         if (state.Status == GameStatus.InProgress)
         {
-            var engine = new MinimaxEngine(TimeSpan.FromSeconds(5));
+            var engine = new MinimaxEngine(TimeSpan.FromSeconds(2));
             var move = engine.FindBestMove(state);
             Assert.NotNull(move);
             var error = JungleGame.Core.Rules.MoveValidator.Validate(state, move!.Value.From, move.Value.To);

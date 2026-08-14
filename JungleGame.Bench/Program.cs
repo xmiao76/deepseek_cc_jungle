@@ -7,11 +7,17 @@ using JungleGame.Core.Model;
 //
 //   --bench [--time <ms>] [--depth <n>]         single search from the start
 //                                               position: nodes, nodes/s, depth
-//   --selfplay [--games <n>] [--timeA <ms>]
-//              [--timeB <ms>] [--seed <n>]      tournament of the current engine
-//                                               against itself at two time budgets
-//                                               (alternating colors; sanity: more
-//                                               time should win clearly)
+//   --selfplay [--games <n>] [--timeA <ms>]     tournament of engine A against
+//              [--timeB <ms>] [--legacyB]       engine B (alternating colors)
+//              [--legacySearchB] [--seed <n>]
+//              [--openings <n>]
+//
+// A/B protocol: same time for both sides, B on the legacy feature set
+// (--legacyB for eval, --legacySearchB for search); accept a change when A wins
+// >= 55% of decisive games. Sanity: more time should win clearly.
+// --openings plays n random legal plies from the start position before the
+// engines take over (deterministic per game, seeded by --seed) so the fixed
+// tournament samples more than one opening.
 
 if (args.Length == 0)
 {
@@ -58,9 +64,13 @@ static int RunSelfPlay(string[] args)
     int timeA = ReadIntArg(args, "--timeA", 2000);
     int timeB = ReadIntArg(args, "--timeB", 500);
     bool legacyB = args.Contains("--legacyB"); // B plays with the legacy (pre-P3) eval
+    bool legacySearchB = args.Contains("--legacySearchB"); // B plays with the legacy search
+    bool legacySearchA = args.Contains("--legacySearchA"); // A plays with the legacy search (bisection)
+    int seed = ReadIntArg(args, "--seed", 42);
+    int openings = ReadIntArg(args, "--openings", 0); // random plies before the engines take over
 
-    var engineA = new MinimaxEngine(TimeSpan.FromMilliseconds(timeA));
-    var engineB = new MinimaxEngine(TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB);
+    var engineA = new MinimaxEngine(TimeSpan.FromMilliseconds(timeA), legacySearch: legacySearchA);
+    var engineB = new MinimaxEngine(TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB);
 
     int winsA = 0;
     int winsB = 0;
@@ -72,6 +82,17 @@ static int RunSelfPlay(string[] args)
         bool aIsBlue = g % 2 == 0; // alternate colors to cancel the first-move advantage
         var state = GameState.CreateInitial();
         int moves = 0;
+
+        // Deterministic per-game opening variety (default 0 keeps the classic
+        // start-position protocol byte-identical)
+        var rng = new Random(seed * 397 + g);
+        for (int o = 0; o < openings && state.Status == GameStatus.InProgress; o++)
+        {
+            var legal = MoveGenerator.GenerateLegalMoves(state, state.CurrentTurn);
+            if (legal.Count == 0)
+                break;
+            state = GameController.ApplyMove(state, legal[rng.Next(legal.Count)]);
+        }
 
         while (state.Status == GameStatus.InProgress && moves < maxMoves)
         {
@@ -99,8 +120,12 @@ static int RunSelfPlay(string[] args)
         Console.WriteLine($"Game {g + 1}: {state.Status} after {moves} moves");
     }
 
+    int decisive = winsA + winsB;
+    string rateA = decisive > 0 ? $"{100.0 * winsA / decisive:F0}% of decisive" : "n/a";
     Console.WriteLine();
-    Console.WriteLine($"A ({timeA} ms/move, v2 eval): {winsA} wins, {draws} draws | B ({timeB} ms/move, {(legacyB ? "legacy" : "v2")} eval): {winsB} wins");
+    Console.WriteLine($"A ({timeA} ms/move, v2): {winsA} wins | B ({timeB} ms/move," +
+        $" {(legacyB ? "legacy eval" : "v2 eval")}{(legacySearchB ? ", legacy search" : "")}): {winsB} wins | {draws} draws");
+    Console.WriteLine($"A win rate: {rateA}");
     return 0;
 }
 
@@ -108,7 +133,8 @@ static void PrintUsage()
 {
     Console.WriteLine("Usage:");
     Console.WriteLine("  JungleGame.Bench --bench [--time <ms>] [--depth <n>]");
-    Console.WriteLine("  JungleGame.Bench --selfplay [--games <n>] [--timeA <ms>] [--timeB <ms>] [--legacyB]");
+    Console.WriteLine("  JungleGame.Bench --selfplay [--games <n>] [--timeA <ms>] [--timeB <ms>]");
+    Console.WriteLine("                     [--legacyB] [--legacySearchB] [--seed <n>] [--openings <n>]");
 }
 
 static int ReadIntArg(string[] args, string name, int fallback)

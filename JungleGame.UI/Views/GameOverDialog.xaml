@@ -1,20 +1,32 @@
 <Window x:Class="JungleGame.UI.Views.GameOverDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Game Over" Width="350" Height="220"
+        Title="Game Over" Width="360" Height="230"
         ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
-        Background="#1E1E2E" Foreground="White">
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-        <TextBlock x:Name="ResultText" FontSize="28" FontWeight="Bold"
-                   HorizontalAlignment="Center" Margin="0,0,0,20"
-                   Foreground="#FFD700"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Content="New Game" Click="NewGame_Click" Width="120" Height="35"
-                    Margin="10" FontSize="14" Background="#4CAF50" Foreground="White"
-                    BorderThickness="0" Cursor="Hand"/>
-            <Button Content="Close" Click="Close_Click" Width="80" Height="35"
-                    Margin="10" FontSize="14" Background="#555" Foreground="White"
-                    BorderThickness="0" Cursor="Hand"/>
+        Icon="/Assets/jungle.ico"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}">
+    <Grid>
+        <!-- Winner accent strip (colored in code-behind) -->
+        <Border x:Name="AccentStrip" Height="4" VerticalAlignment="Top"
+                Background="{StaticResource GoldBrush}"/>
+
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock x:Name="ResultText" FontSize="26" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,0,0,20"
+                       Foreground="{StaticResource GoldBrush}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="New Game" Click="NewGame_Click" Width="120" Height="35"
+                        Margin="10" Padding="12,0"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        IsDefault="True"
+                        AutomationProperties.Name="Start new game"/>
+                <Button Content="Close" Click="Close_Click" Width="80" Height="35"
+                        Margin="10" Padding="12,0"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        IsCancel="True"
+                        AutomationProperties.Name="Close"/>
+            </StackPanel>
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </Window>

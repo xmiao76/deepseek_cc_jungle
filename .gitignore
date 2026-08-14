@@ -10,3 +10,6 @@
 /JungleGame.Bench/obj
 *.dll
 *.exe
+
+# Release artifacts (built, not authored)
+/release/*.zip

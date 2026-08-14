@@ -13,18 +13,6 @@ public readonly struct Position : IEquatable<Position>
 
     public bool IsValid => Col >= 0 && Col <= 6 && Row >= 0 && Row <= 8;
 
-    public Position Move(int dCol, int dRow) => new(Col + dCol, Row + dRow);
-
-    public static IEnumerable<Position> All
-    {
-        get
-        {
-            for (int r = 0; r < 9; r++)
-                for (int c = 0; c < 7; c++)
-                    yield return new Position(c, r);
-        }
-    }
-
     public bool Equals(Position other) => Col == other.Col && Row == other.Row;
     public override bool Equals(object? obj) => obj is Position other && Equals(other);
     public override int GetHashCode() => HashCode.Combine(Col, Row);

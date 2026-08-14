@@ -79,11 +79,9 @@ public static class MoveValidator
         if (isRowChange && piece.Animal == Animal.Tiger)
             return "Tiger cannot jump along rows across the river.";
 
-        // Determine the water squares that would be crossed
+        // Determine the water squares that would be crossed (always non-empty:
+        // the move is orthogonal with distance > 1, so at least one square lies between)
         var waterSquares = GetJumpWaterSquares(from, to, dCol, dRow);
-
-        if (waterSquares == null || waterSquares.Count == 0)
-            return "Invalid jump: no river squares crossed.";
 
         // All squares between must be water
         foreach (var ws in waterSquares)
@@ -130,7 +128,7 @@ public static class MoveValidator
     /// Column-changing jump (dCol != 0): crosses the 2-wide river (2 water squares),
     /// col 0↔3 or 3↔6 (Lion and Tiger).
     /// </summary>
-    private static List<Position>? GetJumpWaterSquares(Position from, Position to, int dCol, int dRow)
+    private static List<Position> GetJumpWaterSquares(Position from, Position to, int dCol, int dRow)
     {
         var squares = new List<Position>();
 
@@ -160,32 +158,5 @@ public static class MoveValidator
         }
 
         return squares;
-    }
-
-    /// <summary>
-    /// Quick check if a move is a valid jump (useful for move generation).
-    /// </summary>
-    public static bool IsJumpMove(Position from, Position to)
-    {
-        int dCol = Math.Abs(to.Col - from.Col);
-        int dRow = Math.Abs(to.Row - from.Row);
-        return (dCol > 1 && dRow == 0) || (dRow > 1 && dCol == 0);
-    }
-
-    /// <summary>
-    /// For move generation: checks if a land square borders a river such that a jump could originate from it.
-    /// </summary>
-    public static bool IsRiverBank(Board board, Position pos)
-    {
-        if (board.IsWater(pos)) return false;
-
-        // Check if any adjacent square is water
-        foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
-        {
-            var adj = new Position(pos.Col + dc, pos.Row + dr);
-            if (adj.IsValid && board.IsWater(adj))
-                return true;
-        }
-        return false;
     }
 }

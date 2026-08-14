@@ -99,8 +99,5 @@ public class GameState
     public ImmutableList<Piece> GetPlayerPieces(Player player) =>
         Pieces.Values.Where(p => p.Owner == player).ToImmutableList();
 
-    public ImmutableList<Piece> GetCapturedBy(Player capturer) =>
-        capturer == Player.Blue ? CapturedRed : CapturedBlue;
-
     public bool HasPieceAt(Position pos) => Pieces.ContainsKey(pos);
 }

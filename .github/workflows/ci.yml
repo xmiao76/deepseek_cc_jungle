@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build JungleGame.sln -c Release
+
+      - name: Test with coverage
+        run: dotnet test JungleGame.Tests -c Release --collect:"XPlat Code Coverage"
+
+      - name: Check coverage gate
+        run: powershell -File scripts/check-coverage.ps1
+
+      - name: Engine smoke test
+        # Crash detector only — small budgets keep this step to a few minutes
+        run: dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 2 --timeA 1000 --timeB 300

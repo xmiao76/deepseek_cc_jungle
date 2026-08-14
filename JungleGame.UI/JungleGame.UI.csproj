@@ -23,6 +23,7 @@
     <EmbeddedResource Include="NativeLibs\PresentationNative_cor3.dll" LogicalName="native.PresentationNative_cor3.dll" />
     <EmbeddedResource Include="NativeLibs\vcruntime140_cor3.dll" LogicalName="native.vcruntime140_cor3.dll" />
     <EmbeddedResource Include="NativeLibs\wpfgfx_cor3.dll" LogicalName="native.wpfgfx_cor3.dll" />
+    <Resource Include="Assets\jungle.ico" />
   </ItemGroup>
 
   <Target Name="ExcludeWpfNativeLibsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">

@@ -4,15 +4,9 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
-            <SolidColorBrush x:Key="LandBrush" Color="#DEB887"/>
-            <SolidColorBrush x:Key="RiverBrush" Color="#4169E1"/>
-            <SolidColorBrush x:Key="TrapBrush" Color="#CD5C5C"/>
-            <SolidColorBrush x:Key="DenBrush" Color="#8B0000"/>
-            <SolidColorBrush x:Key="SelectedBrush" Color="#FFD700"/>
-            <SolidColorBrush x:Key="LegalMoveBrush" Color="#90EE90"/>
-            <SolidColorBrush x:Key="BluePieceBrush" Color="#1E90FF"/>
-            <SolidColorBrush x:Key="RedPieceBrush" Color="#DC143C"/>
-            <SolidColorBrush x:Key="BackgroundBrush" Color="#2F1E0E"/>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Theme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -5,7 +5,9 @@
         Title="Jungle (Dou Shou Qi / 鬥獸棋)" Width="780" Height="680"
         MinWidth="700" MinHeight="600"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E2E" Foreground="White">
+        Icon="/Assets/jungle.ico"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -15,9 +17,15 @@
         <!-- Board: the canvas keeps its 500×650 design size; the Viewbox scales
              it uniformly to the available space so the board grows and shrinks
              with the window at any resolution/DPI -->
-        <Border Grid.Column="0" BorderBrush="#555" BorderThickness="1" Margin="0,0,10,0">
+        <Border Grid.Column="0" BorderBrush="#555" BorderThickness="1" CornerRadius="4"
+                Margin="0,0,10,0">
             <Viewbox Stretch="Uniform">
-                <Canvas x:Name="BoardCanvas" Width="500" Height="650" Background="#3D2B1F"/>
+                <Canvas x:Name="BoardCanvas" Width="500" Height="650"
+                        Background="{StaticResource BoardFrameBrush}"
+                        Focusable="True"
+                        KeyboardNavigation.TabNavigation="Local"
+                        AutomationProperties.Name="Jungle board"
+                        AutomationProperties.HelpText="Arrow keys move the cursor, Enter selects or moves, Escape deselects."/>
             </Viewbox>
         </Border>
 
@@ -25,20 +33,20 @@
         <StackPanel Grid.Column="1" Width="220" Margin="5">
             <!-- Title -->
             <TextBlock Text="Jungle" FontSize="26" FontWeight="Bold"
-                       Foreground="#FFD700" HorizontalAlignment="Center"
+                       Foreground="{StaticResource GoldBrush}" HorizontalAlignment="Center"
                        Margin="0,0,0,5"/>
             <TextBlock Text="Dou Shou Qi / 鬥獸棋" FontSize="13"
-                       Foreground="#AAA" HorizontalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"
                        Margin="0,0,0,15"/>
 
             <!-- Status -->
-            <Border Background="#2A2A3E" CornerRadius="5" Padding="10" Margin="0,0,0,10">
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,10">
                 <StackPanel>
                     <TextBlock x:Name="StatusLabel" FontSize="16" FontWeight="Bold"
-                               Foreground="#FFD700" TextWrapping="Wrap"
+                               Foreground="{StaticResource GoldBrush}" TextWrapping="Wrap"
                                HorizontalAlignment="Center"/>
                     <TextBlock x:Name="ThinkingIndicator" FontSize="13"
-                               Foreground="#888" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
                                Margin="0,2,0,0"/>
                 </StackPanel>
             </Border>
@@ -46,38 +54,43 @@
             <!-- Controls -->
             <StackPanel Margin="0,5">
                 <Button x:Name="NewGameBtn" Content="New Game" Click="NewGame_Click"
-                        Height="36" Margin="0,3" FontSize="14"
-                        Background="#4CAF50" Foreground="White" BorderThickness="0"
-                        Cursor="Hand"/>
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        AutomationProperties.Name="New Game"
+                        Height="36" Margin="0,3" Padding="12,0"/>
                 <Button x:Name="FlipBoardBtn" Content="Flip Board (180°)" Click="FlipBoard_Click"
-                        Height="36" Margin="0,3" FontSize="14"
-                        Background="#FF9800" Foreground="White" BorderThickness="0"
-                        Cursor="Hand"/>
+                        Style="{StaticResource AccentButtonStyle}"
+                        AutomationProperties.Name="Flip board 180 degrees"
+                        Height="36" Margin="0,3" Padding="12,0"/>
             </StackPanel>
 
             <!-- Captured Pieces -->
-            <Border Background="#2A2A3E" CornerRadius="5" Padding="10" Margin="0,10,0,5">
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,10,0,5">
                 <StackPanel>
                     <TextBlock Text="Captured" FontSize="14" FontWeight="Bold"
                                Margin="0,0,0,5"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Blue:" FontSize="12" Foreground="#1E90FF" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="CapturedBlueLabel" FontSize="12" Foreground="#AAA"/>
+                        <TextBlock Text="Blue:" FontSize="12"
+                                   Foreground="{StaticResource BluePieceBrush}" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="CapturedBlueLabel" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Red:" FontSize="12" Foreground="#DC143C" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="CapturedRedLabel" FontSize="12" Foreground="#AAA"/>
+                        <TextBlock Text="Red:" FontSize="12"
+                                   Foreground="{StaticResource RedPieceBrush}" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="CapturedRedLabel" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <!-- Move History -->
-            <Border Background="#2A2A3E" CornerRadius="5" Padding="10" Margin="0,5,0,0">
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,5,0,0">
                 <StackPanel>
                     <TextBlock Text="Move Log" FontSize="14" FontWeight="Bold"
                                Margin="0,0,0,5"/>
                     <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
-                        <TextBlock x:Name="MoveHistoryLabel" FontSize="11" Foreground="#AAA"
+                        <TextBlock x:Name="MoveHistoryLabel" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
                                    FontFamily="Consolas" TextWrapping="Wrap"/>
                     </ScrollViewer>
                 </StackPanel>

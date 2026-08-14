@@ -1,14 +1,12 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
 using JungleGame.Core.AI;
 using JungleGame.Core.Engine;
 using JungleGame.Core.Model;
 
 namespace JungleGame.UI.ViewModels;
 
-public class MainViewModel : INotifyPropertyChanged
+public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private GameState _state;
     private readonly MinimaxEngine _ai;
@@ -27,8 +25,6 @@ public class MainViewModel : INotifyPropertyChanged
         _state = GameState.CreateInitial();
         _ai = new MinimaxEngine(TimeSpan.FromMilliseconds(aiTimeMs));
         _isHumanTurn = true;
-        NewGameCommand = new RelayCommand(_ => StartNewGame());
-        FlipBoardCommand = new RelayCommand(_ => ToggleFlip());
     }
 
     public GameState State => _state;
@@ -79,12 +75,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get
         {
-            if (_state.Status == GameStatus.BlueWins)
-                return "Blue wins!";
-            if (_state.Status == GameStatus.RedWins)
-                return "Red wins!";
-            if (_state.Status == GameStatus.Draw)
-                return "Draw";
+            if (_state.Status != GameStatus.InProgress)
+                return GameStrings.StatusText(_state.Status);
             if (_aiThinking)
                 return "AI thinking...";
             return $"{_state.CurrentTurn}'s turn";
@@ -100,8 +92,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     public List<string> MoveHistory => _moveHistory;
 
-    public ICommand NewGameCommand { get; }
-    public ICommand FlipBoardCommand { get; }
+    /// <summary>The most recently applied move, in logical coordinates (null before the first move).</summary>
+    public (Position From, Position To, bool WasCapture)? LastMove { get; private set; }
+
+    /// <summary>Increments on every applied move; the view uses it to detect a new move to animate.</summary>
+    public long MoveCounter { get; private set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action<GameStatus>? GameOver;
@@ -114,6 +109,8 @@ public class MainViewModel : INotifyPropertyChanged
         SelectedPosition = null;
         LegalMoves = new HashSet<Position>();
         _moveHistory.Clear();
+        LastMove = null;
+        MoveCounter = 0;
 
         if (!_humanFirst || _aiVsAi)
         {
@@ -195,6 +192,8 @@ public class MainViewModel : INotifyPropertyChanged
         var move = new Move(from, to, _state.GetPieceAt(to));
         _state = GameController.ApplyMove(_state, move);
         _moveHistory.Add(move.ToString());
+        LastMove = (from, to, move.IsCapture);
+        MoveCounter++;
 
         if (_state.Status != GameStatus.InProgress)
         {
@@ -215,6 +214,7 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task DoAIMove()
     {
         _aiCts?.Cancel();
+        _aiCts?.Dispose();
         _aiCts = new CancellationTokenSource();
         var token = _aiCts.Token;
 
@@ -233,13 +233,18 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 // Unreachable through normal play (ApplyMove already declares a
                 // terminal status before the AI's turn), but never leave the game
-                // hanging: the AI cannot move, so the human wins.
-                GameOver?.Invoke(GameStatus.BlueWins);
+                // hanging: the AI has no legal moves, so the side to move loses
+                // (mirrors GameController.CheckWinCondition).
+                GameOver?.Invoke(_state.CurrentTurn == Player.Blue
+                    ? GameStatus.RedWins
+                    : GameStatus.BlueWins);
                 return;
             }
 
             _state = GameController.ApplyMove(_state, move.Value);
             _moveHistory.Add($"(AI) {move.Value}");
+            LastMove = (move.Value.From, move.Value.To, move.Value.IsCapture);
+            MoveCounter++;
 
             if (_state.Status != GameStatus.InProgress)
             {
@@ -256,10 +261,12 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            // Never leave the game hung: log and hand the turn back to the human
+            // Never leave the game hung: log and hand the turn back to the human.
+            // Mirror the normal completion path so an AI-first game does not
+            // transiently show "Your turn".
             System.Diagnostics.Debug.WriteLine($"AI error: {ex.Message}");
             System.Diagnostics.Trace.TraceError($"AI error: {ex}");
-            IsHumanTurn = true;
+            IsHumanTurn = !_aiVsAi;
         }
         finally
         {
@@ -276,6 +283,23 @@ public class MainViewModel : INotifyPropertyChanged
     {
         BoardFlipped = !BoardFlipped;
         NotifyAll();
+    }
+
+    /// <summary>Keyboard navigation: deselect without moving.</summary>
+    public void ClearSelection()
+    {
+        SelectedPosition = null;
+        LegalMoves = new HashSet<Position>();
+        NotifyAll();
+    }
+
+    /// <summary>Cancels any in-flight AI search (the window calls this on close).</summary>
+    public void Dispose()
+    {
+        _aiCts?.Cancel();
+        _aiCts?.Dispose();
+        _aiCts = null;
+        GC.SuppressFinalize(this);
     }
 
     public Position GetVisualPosition(Position logicalPos)
@@ -324,13 +348,4 @@ public class MainViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-}
-
-public class RelayCommand : ICommand
-{
-    private readonly Action<object?> _execute;
-    public RelayCommand(Action<object?> execute) => _execute = execute;
-    public event EventHandler? CanExecuteChanged;
-    public bool CanExecute(object? parameter) => true;
-    public void Execute(object? parameter) => _execute(parameter);
 }

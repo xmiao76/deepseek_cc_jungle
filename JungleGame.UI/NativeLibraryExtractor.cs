@@ -31,34 +31,49 @@ internal static class NativeLibraryExtractor
 
     public static void EnsureExtracted()
     {
-        foreach (var name in LibraryNames)
-            EnsureLibrary(name);
-
-        // Pre-load the libraries by full path: WPF's own loader does not honor
-        // SetDllDirectory, but LoadLibrary calls by name find already-loaded modules.
-        foreach (var name in LibraryNames)
+        try
         {
-            if (LoadLibrary(Path.Combine(TargetDirectory, name)) == IntPtr.Zero)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to pre-load native library {name} (Win32 error {Marshal.GetLastWin32Error()}).");
-            }
-        }
+            foreach (var name in LibraryNames)
+                EnsureLibrary(name);
 
-        SetDllDirectory(TargetDirectory);
+            // Pre-load the libraries by full path: WPF's own loader does not honor
+            // SetDllDirectory, but LoadLibrary calls by name find already-loaded modules.
+            foreach (var name in LibraryNames)
+            {
+                if (LoadLibrary(Path.Combine(TargetDirectory, name)) == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to pre-load native library {name} (Win32 error {Marshal.GetLastWin32Error()}).");
+                }
+            }
+
+            SetDllDirectory(TargetDirectory);
+        }
+        catch (Exception ex)
+        {
+            // WPF cannot run without these libraries, so the failure is fatal —
+            // but make it actionable: name the directory the user can delete.
+            Console.Error.WriteLine(
+                $"Jungle: failed to extract WPF native libraries to '{TargetDirectory}' ({ex.Message}). " +
+                "Delete that directory and try again.");
+            throw;
+        }
     }
 
     private static void EnsureLibrary(string fileName)
     {
         var targetPath = Path.Combine(TargetDirectory, fileName);
-        if (File.Exists(targetPath) && new FileInfo(targetPath).Length > 0)
-            return;
-
-        Directory.CreateDirectory(TargetDirectory);
 
         using var stream = Assembly.GetExecutingAssembly()
             .GetManifestResourceStream("native." + fileName)
             ?? throw new InvalidOperationException($"Embedded native library {fileName} not found.");
+
+        // Re-extract when the cached file is missing, empty, or truncated
+        // (e.g. a previous extraction was interrupted mid-write).
+        if (File.Exists(targetPath) && new FileInfo(targetPath).Length == stream.Length)
+            return;
+
+        Directory.CreateDirectory(TargetDirectory);
 
         // Concurrent launches may race here; whichever writes first wins
         try
@@ -68,7 +83,8 @@ internal static class NativeLibraryExtractor
         }
         catch (IOException)
         {
-            if (!File.Exists(targetPath))
+            // Another launch is (or was) extracting; accept its file if it looks complete
+            if (!File.Exists(targetPath) || new FileInfo(targetPath).Length != stream.Length)
                 throw;
         }
     }

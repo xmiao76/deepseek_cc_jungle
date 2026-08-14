@@ -46,7 +46,9 @@ public class FullGameTests
     public void AIvsAI_QuickGame_Completes()
     {
         var state = GameState.CreateInitial();
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(1)); // Fast AI
+        // Depth-limited so the whole game finishes in a few seconds even at the
+        // 100-move cap; the point of the test is engine/game integration, not strength.
+        var engine = new MinimaxEngine(TimeSpan.FromMilliseconds(100), maxDepth: 5);
         int moveCount = 0;
         const int maxMoves = 100;
 

@@ -10,12 +10,17 @@ public class MinimaxEngine
     private const int MateThreshold = TranspositionTable.MateScore - TranspositionTable.MateRange;
     private const int DefaultMaxDepth = 20;
     private const int MaxPly = 64;
-    private const int MaxMovesPerPly = 128;
+    private const int MaxMovesPerPly = SearchBoard.MaxMovesPerPly;
     private const int AspirationDelta = 25;
+    private const int KillerBonus1 = 900;
+    private const int KillerBonus2 = 800;
+    private const int FutilityMargin = 300;
+    private const int DeltaMargin = 200;
 
     private long _timeLimitTicks; // accessed via Interlocked (SetTimeLimit may race a running search)
     private readonly int _maxDepth;
     private readonly bool _legacyEval;
+    private readonly bool _legacySearch;
     private readonly TranspositionTable _tt;
     private readonly int[,] _killerMoves;
     private readonly int[,] _historyTable;
@@ -30,12 +35,19 @@ public class MinimaxEngine
     private readonly ulong[] _pathHashes = new ulong[256];
     private int _pathLen;
 
-    public MinimaxEngine(TimeSpan? timeLimit = null, int? maxDepth = null, bool legacyEval = false)
+    /// <param name="legacyEval">Disables the P3 evaluation terms (A/B strength tests).</param>
+    /// <param name="legacySearch">Disables the post-P3 search features (A/B strength tests).</param>
+    public MinimaxEngine(
+        TimeSpan? timeLimit = null,
+        int? maxDepth = null,
+        bool legacyEval = false,
+        bool legacySearch = false)
     {
         _timeLimitTicks = (timeLimit ?? TimeSpan.FromSeconds(4)).Ticks;
         // PVSearch plus quiescence plies must fit inside the per-ply buffer tables
         _maxDepth = Math.Min(maxDepth ?? DefaultMaxDepth, MaxPly - 32);
         _legacyEval = legacyEval;
+        _legacySearch = legacySearch;
         _tt = new TranspositionTable(1 << 20);
         _killerMoves = new int[MaxPly, 2];
         _historyTable = new int[Zobrist.PositionCount, Zobrist.PositionCount];
@@ -70,6 +82,7 @@ public class MinimaxEngine
     {
         lock (_searchGate)
         {
+            _tt.NewGeneration(); // Entries older than the previous search are ignored
             return SearchBestMove(state, token);
         }
     }
@@ -136,6 +149,13 @@ public class MinimaxEngine
 
                     int score;
                     if (i == 0)
+                        // NOTE: the root PV child is searched with the UN-negated
+                        // window, matching the original engine. The "correct"
+                        // negated form (-searchBeta, -searchAlpha) was tried and
+                        // produced draw-seeking play (see CLAUDE.md recorded
+                        // results): with proper cutoffs, the narrow aspiration
+                        // window stores bound entries that steer later searches
+                        // toward repetition lines in equal positions.
                         score = -PVSearch(child, depth - 1, searchAlpha, searchBeta, 1, sw, token);
                     else
                     {
@@ -155,7 +175,9 @@ public class MinimaxEngine
 
                 if (!Aborted(sw, token) && (currentBest <= searchAlpha || currentBest >= searchBeta))
                 {
-                    // Failed low/high: widen the window and try the depth again
+                    // Failed low/high: widen the window to full width and try the
+                    // depth again (incremental widening was tried and reverted —
+                    // see the root-window note above)
                     if (currentBest <= searchAlpha)
                         searchAlpha = int.MinValue + 1;
                     if (currentBest >= searchBeta)
@@ -209,6 +231,43 @@ public class MinimaxEngine
             return QuiescenceSearch(board, alpha, beta, ply, sw, token);
 
         int side = board.Turn;
+
+        // Null-move pruning: if the side to move can pass and still refute the
+        // opponent's best try at reduced depth, this node is a beta cutoff. The
+        // pass move makes the position strictly worse for the passer, so a cutoff
+        // is sound — except in zugzwang, which Dou Shou Qi positions with few
+        // pieces frequently are. Guards: disabled with <= 6 total pieces or <= 2
+        // pieces for the side to move; a verification re-search at reduced depth
+        // must confirm the cutoff. (Never applied at the root.)
+        if (!_legacySearch && depth >= 3 && beta < MateThreshold
+            && board.PieceCount(0) + board.PieceCount(1) > 6
+            && board.PieceCount(side) > 2)
+        {
+            const int nullReduction = 2;
+            board.MakeNullMove();
+            int nullScore = -PVSearch(board, depth - 1 - nullReduction, -beta, -(beta - 1), ply + 1, sw, token);
+            board.UnmakeNullMove();
+            if (Aborted(sw, token))
+            {
+                _aborted = true;
+                return 0;
+            }
+
+            if (nullScore >= beta)
+            {
+                // Verification: a reduced-depth real search of this node must
+                // confirm the cutoff (catches zugzwang the guards missed)
+                int verifyScore = PVSearch(board, depth - 1 - nullReduction, alpha, beta, ply, sw, token);
+                if (Aborted(sw, token))
+                {
+                    _aborted = true;
+                    return 0;
+                }
+                if (verifyScore >= beta)
+                    return beta;
+            }
+        }
+
         var moves = _plyMoves[ply];
         int moveCount = board.GenerateMoves(side, moves);
 
@@ -221,6 +280,18 @@ public class MinimaxEngine
         SearchMove bestMove = moves[0];
         int bestScore = int.MinValue;
         BoundType bound = BoundType.UpperBound;
+        bool anySearched = false;
+
+        // Futility pruning at the frontier: a quiet move that cannot lift the
+        // static score near alpha is skipped. Trap squares are exempt — their
+        // tactical value is not captured by the static evaluation. Never applies
+        // in mate-or-be-mated windows, where the only defense may be quiet moves.
+        bool futilityApplicable = !_legacySearch && depth == 1
+            && alpha > -MateThreshold && alpha < MateThreshold
+            && board.PieceCount(0) + board.PieceCount(1) > 8;
+        int staticEval = 0;
+        if (futilityApplicable)
+            staticEval = EvaluationFunction.EvaluateStatic(board, side, _legacyEval);
 
         // Push the position onto the repetition path (skip if the stack is full)
         bool pathPushed = _pathLen < _pathHashes.Length;
@@ -237,6 +308,15 @@ public class MinimaxEngine
             }
 
             var move = moves[i];
+
+            if (futilityApplicable && !move.IsCapture && !move.EntersDen
+                && !SearchBoard.IsEnemyTrapSquare(move.To, side)
+                && SearchBoard.EffectiveRankOf(board.Occupant(move.From), move.From) != 0
+                && staticEval + FutilityMargin <= alpha)
+                continue;
+
+            anySearched = true;
+
             var child = GetBoard();
             board.CopyTo(child);
             child.ApplyMove(move);
@@ -247,8 +327,15 @@ public class MinimaxEngine
             else if (i >= 3 && depth >= 3 && !move.IsCapture)
             {
                 // Late move reduction: quiet moves late in the order are searched
-                // one ply shallower with a null window; re-searched if they score well.
-                score = -PVSearch(child, depth - 2, -(alpha + 1), -alpha, ply + 1, sw, token);
+                // shallower with a null window; re-searched if they score well.
+                // The reduction scales with move index and depth; moves that enter
+                // a den, and the last couple of moves (small move sets), are exempt.
+                bool reduce = !_legacySearch && !move.EntersDen && i < moveCount - 2;
+                int reducedDepth = reduce
+                    ? Math.Max(1, depth - 1 - (1 + (i >= 6 ? 1 : 0) + (depth >= 8 ? 1 : 0)))
+                    : depth - 2;
+
+                score = -PVSearch(child, reducedDepth, -(alpha + 1), -alpha, ply + 1, sw, token);
                 if (score > alpha)
                     score = -PVSearch(child, depth - 1, -(alpha + 1), -alpha, ply + 1, sw, token);
                 if (score > alpha && score < beta)
@@ -299,10 +386,22 @@ public class MinimaxEngine
         if (pathPushed)
             _pathLen--;
 
+        // Every move was pruned by futility: return the static evaluation (a
+        // fail-low value). Returning int.MinValue here would overflow when
+        // negated by the parent and turn the line into a phantom blunder.
+        if (!anySearched && !_aborted)
+            return staticEval;
+
+        // An abort between the top-of-function check and the first completed
+        // move leaves bestScore at int.MinValue, which would wrap on negation
+        // in the parent; return a neutral value instead (the abort flag already
+        // prevents any TT store and root acceptance)
+        if (_aborted)
+            return 0;
+
         // A partially searched node must not pollute the table
-        if (!_aborted)
-            _tt.Store(board.Hash, depth, AdjustMateForStore(bestScore, ply),
-                ToPublicMove(bestMove), bound);
+        _tt.Store(board.Hash, depth, AdjustMateForStore(bestScore, ply),
+            ToPublicMove(bestMove), bound);
         return bestScore;
     }
 
@@ -319,12 +418,24 @@ public class MinimaxEngine
             return TerminalScore(board.WinnerSide, board.Turn, ply);
 
         int side = board.Turn;
-        int myMobility = board.CountLegalMoves(side);
-        int oppMobility = board.CountLegalMoves(side ^ 1);
-        int standPat = EvaluationFunction.Evaluate(board, side, myMobility, oppMobility, _legacyEval);
+
+        // Lazy mobility in the stand-pat: the full evaluation costs two move
+        // generations per qnode. Most qnodes are null-window cut nodes, so the
+        // mobility-free value is checked first; the full evaluation only runs
+        // when that value falls inside the window.
+        int standPat = _legacySearch
+            ? EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), _legacyEval)
+            : EvaluationFunction.EvaluateStatic(board, side, _legacyEval);
 
         if (standPat >= beta)
             return beta;
+
+        if (!_legacySearch && standPat > alpha)
+        {
+            standPat = EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), _legacyEval);
+            if (standPat >= beta)
+                return beta;
+        }
 
         if (standPat > alpha)
             alpha = standPat;
@@ -349,6 +460,16 @@ public class MinimaxEngine
             }
 
             var move = moves[i];
+
+            // Delta pruning: skip a capture that cannot raise the score near
+            // alpha. Den entries are never pruned (winning move at the horizon).
+            if (!_legacySearch && move.IsCapture)
+            {
+                int victimGain = SearchBoard.EffectiveRankOf(move.CapturedId, move.To) * 100;
+                if (standPat + victimGain + DeltaMargin <= alpha)
+                    continue;
+            }
+
             var child = GetBoard();
             board.CopyTo(child);
             child.ApplyMove(move);
@@ -428,9 +549,9 @@ public class MinimaxEngine
         {
             int packed = move.From | (move.To << 6);
             if (packed == _killerMoves[ply, 0])
-                score = 900;
+                score = KillerBonus1;
             else if (packed == _killerMoves[ply, 1])
-                score = 800;
+                score = KillerBonus2;
         }
 
         // History heuristic bonus
