@@ -34,6 +34,7 @@ public class MinimaxEngine
             new SearchContext(),
             new SearchOptions(legacyEval, legacySearch),
             maxDepth);
+        TablebaseProbe.Initialize(); // idempotent: loads the table once if present
     }
 
     public long NodesSearched => _searcher.Nodes;

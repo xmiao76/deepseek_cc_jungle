@@ -47,6 +47,10 @@ switch (args[0])
         return ArenaRunner.Run(args);
     case "--testsuite":
         return RunTestSuite(args);
+    case "--tb-build":
+        return TbRunner.RunBuild(args);
+    case "--tb-verify":
+        return TbRunner.RunVerify(args);
     default:
         PrintUsage();
         return 1;
@@ -183,4 +187,6 @@ static void PrintUsage()
     Console.WriteLine("                     [--legacySearchA] [--legacySearchB] [--seed <n>] [--smoke]");
     Console.WriteLine("                     [--openings-file <path>] [--openings-imbalanced <n>]");
     Console.WriteLine("  JungleGame.Bench --testsuite [--file <path.tsuite>]");
+    Console.WriteLine("  JungleGame.Bench --tb-build [--path <dir>]");
+    Console.WriteLine("  JungleGame.Bench --tb-verify [--samples <n>] [--seed <n>]");
 }

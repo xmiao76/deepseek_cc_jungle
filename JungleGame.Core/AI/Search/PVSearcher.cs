@@ -76,6 +76,17 @@ internal sealed class PVSearcher
         var moves = _context.RootMoves;
         SearchMove bestMove = moves[0];
         Move bestMoveForOrdering = ToPublicMove(bestMove);
+
+        // A tablebase root position: seed the ordering with the tablebase move
+        // (the search still runs — the opponent may err against imperfect play).
+        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+            && root.PieceCount(0) + root.PieceCount(1) <= 3
+            && TablebaseProbe.TryProbeWithMove(root, 0, out _, out Move? tbRootMove)
+            && tbRootMove != null)
+        {
+            bestMoveForOrdering = tbRootMove.Value;
+        }
+
         int bestScore = int.MinValue;
 
         for (int depth = 1; depth <= _maxDepth; depth++)
@@ -181,6 +192,17 @@ internal sealed class PVSearcher
         // no repetition state, so a probed score would mask the draw)
         if (_context.IsRepetition(board.Hash))
             return 0;
+
+        // Tablebase probe: exact WDL for ≤ 3-piece positions (also before the
+        // TT — a probed bound must not mask the exact value). legacySearch
+        // disables probing (A/B flag).
+        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+            && board.PieceCount(0) + board.PieceCount(1) <= 3
+            && TablebaseProbe.TryProbe(board, ply, out int tbScore))
+        {
+            _tt.Store(board.Hash, 127, AdjustMateForStore(tbScore, ply), default, BoundType.Exact);
+            return tbScore;
+        }
 
         // TT probe
         if (_tt.TryProbe(board.Hash, depth, alpha, beta, ply, out int ttScore, out Move ttMove))
@@ -384,6 +406,13 @@ internal sealed class PVSearcher
 
         if (board.WinnerSide != SearchBoard.NoWinner)
             return TerminalScore(board.WinnerSide, board.Turn, ply);
+
+        // A ≤ 3-piece position is fully resolved by the tablebase — return the
+        // exact score instead of searching captures.
+        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+            && board.PieceCount(0) + board.PieceCount(1) <= 3
+            && TablebaseProbe.TryProbe(board, ply, out int tbQScore))
+            return tbQScore;
 
         int side = board.Turn;
 

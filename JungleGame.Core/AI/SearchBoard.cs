@@ -307,6 +307,121 @@ internal sealed class SearchBoard
         return EffectiveRankOf(attackerId, attackerSq) >= EffectiveRankOf(defenderId, defenderSq);
     }
 
+    /// <summary>
+    /// Builds a board from packed pieces (tablebase builder): types are
+    /// (animal-1)*2 + owner, ids assigned like FromGameState. Callers must
+    /// provide distinct squares and at most 8 pieces per side.
+    /// </summary>
+    internal static SearchBoard FromPackedPieces(ReadOnlySpan<byte> types, ReadOnlySpan<byte> squares, int stm)
+    {
+        var board = new SearchBoard();
+        var copies = new byte[DistinctPieceKinds];
+        ulong hash = 0;
+        for (int i = 0; i < types.Length; i++)
+        {
+            byte id = (byte)(types[i] + 1 + (copies[types[i]]++ > 0 ? DistinctPieceKinds : 0));
+            int side = types[i] & 1;
+            board._squareIds[squares[i]] = id;
+            board._posOf[id] = squares[i];
+            board._ids[side][board._count[side]++] = id;
+            hash ^= Zobrist.PieceKeys[squares[i], types[i]];
+        }
+        board._turn = (byte)stm;
+        if (stm == 1)
+            hash ^= Zobrist.TurnKey;
+        board.Hash = hash;
+        return board;
+    }
+
+    /// <summary>
+    /// Allocation-free move generation for ≤ 3-piece positions (the tablebase
+    /// builder: ~10⁸ positions per sweep, so constructing SearchBoard
+    /// instances would drown the GC). Types are (animal-1)*2 + owner, ids are
+    /// type + 1 (RankOf[type+1] is the piece's rank, so CanCapture works
+    /// unchanged). Mirrors GenerateMoves/TryMakeMove exactly.
+    /// </summary>
+    internal static int GenerateMovesCompact(
+        byte typeA, byte sqA, byte typeB, byte sqB, byte typeC, byte sqC, int stm, Span<SearchMove> buf)
+    {
+        Span<byte> occ = stackalloc byte[SquareCount];
+        occ[sqA] = (byte)(typeA + 1);
+        occ[sqB] = (byte)(typeB + 1);
+        // typeC = 255 (sentinel) means a 2-piece position.
+        if (typeC != 255)
+            occ[sqC] = (byte)(typeC + 1);
+
+        int n = 0;
+        n = TryCompact(typeA, sqA, occ, stm, buf, n);
+        n = TryCompact(typeB, sqB, occ, stm, buf, n);
+        if (typeC != 255)
+            n = TryCompact(typeC, sqC, occ, stm, buf, n);
+        return n;
+    }
+
+    private static int TryCompact(byte type, byte from, Span<byte> occ, int stm, Span<SearchMove> buf, int n)
+    {
+        if (type == 255 || (type & 1) != stm)
+            return n;
+
+        byte id = (byte)(type + 1);
+        foreach (byte to in Neighbors[from])
+        {
+            if (IsOwnDen(to, stm))
+                continue;
+            if (IsWater(to) && RankOf[id] != 1)
+                continue;
+
+            byte occId = occ[to];
+            if (occId != 0)
+            {
+                if (((occId - 1) & 1) == stm)
+                    continue; // own piece
+                if (!CanCapture(id, from, occId, to))
+                    continue;
+                buf[n++] = new SearchMove(from, to, occId, false);
+            }
+            else
+            {
+                buf[n++] = new SearchMove(from, to, 0, IsOppDen(to, stm));
+            }
+        }
+
+        Jump[]? jumps = RankOf[id] == 7 ? LionJumpsOf[from] : RankOf[id] == 6 ? TigerJumpsOf[from] : null;
+        if (jumps != null)
+        {
+            foreach (var jump in jumps)
+            {
+                bool blocked = (jump.MidCount >= 1 && IsRat(occ[jump.Mid0])) ||
+                    (jump.MidCount >= 2 && IsRat(occ[jump.Mid1])) ||
+                    (jump.MidCount >= 3 && IsRat(occ[jump.Mid2]));
+                if (blocked)
+                    continue;
+                if (TryMakeMoveCompact(occ, id, from, jump.Target, stm, out var m))
+                    buf[n++] = m;
+            }
+        }
+
+        return n;
+    }
+
+    private static bool TryMakeMoveCompact(Span<byte> occ, byte id, byte from, byte to, int stm, out SearchMove m)
+    {
+        m = default;
+        byte occId = occ[to];
+        if (occId != 0)
+        {
+            if (((occId - 1) & 1) == stm)
+                return false;
+            if (!CanCapture(id, from, occId, to))
+                return false;
+            m = new SearchMove(from, to, occId, false);
+            return true;
+        }
+
+        m = new SearchMove(from, to, 0, IsOppDen(to, stm));
+        return true;
+    }
+
     public static SearchBoard FromGameState(GameState state)
     {
         var board = new SearchBoard();
@@ -428,7 +543,7 @@ internal sealed class SearchBoard
     /// A side has at most 16 pieces × (4 steps + 2 jumps) = 96 moves, so buffers
     /// of 128 entries are safe.
     /// </summary>
-    public int GenerateMoves(int side, SearchMove[] buf)
+    public int GenerateMoves(int side, Span<SearchMove> buf)
     {
         int n = 0;
         foreach (byte id in PieceIds(side))
@@ -463,7 +578,7 @@ internal sealed class SearchBoard
     }
 
     /// <summary>Captures plus enemy-den entries (the moves searched by quiescence).</summary>
-    public int GenerateCaptures(int side, SearchMove[] buf)
+    public int GenerateCaptures(int side, Span<SearchMove> buf)
     {
         int n = 0;
         foreach (byte id in PieceIds(side))

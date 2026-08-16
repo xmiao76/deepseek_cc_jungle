@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="JungleGame.Tests" />
+    <!-- Offline tooling: the tb-build and tb-verify modes need the internals. -->
+    <InternalsVisibleTo Include="JungleGame.Bench" />
   </ItemGroup>
 
 </Project>
