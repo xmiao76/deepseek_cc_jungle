@@ -104,6 +104,8 @@ internal sealed class SearchBoard
     internal static readonly byte[][] Neighbors = new byte[SquareCount][];
     /// <summary>All jump landings onto each square (used by the SEE attacker scan).</summary>
     internal static readonly JumpAttack[][] JumpAttackersTo = new JumpAttack[SquareCount][];
+    /// <summary>True when the square is orthogonally adjacent to the side's opponent den (a den-entry setup square).</summary>
+    internal static readonly bool[,] IsAdjacentToOppDen = new bool[SquareCount, 2];
     private static readonly Jump[][] LionJumpsOf = new Jump[SquareCount][];
     private static readonly Jump[][] TigerJumpsOf = new Jump[SquareCount][];
 
@@ -163,6 +165,13 @@ internal sealed class SearchBoard
         }
         for (int sq = 0; sq < SquareCount; sq++)
             JumpAttackersTo[sq] = attackersTo[sq].ToArray();
+
+        // Den-entry setup squares: the three orthogonal neighbors of each den.
+        // Blue's opponent den is (3,8) = square 59; Red's is (3,0) = square 3.
+        foreach (byte adj in Neighbors[59])
+            IsAdjacentToOppDen[adj, 0] = true; // for Blue (side 0)
+        foreach (byte adj in Neighbors[3])
+            IsAdjacentToOppDen[adj, 1] = true; // for Red (side 1)
 
         static void AddIfValid(List<byte> list, int c, int r)
         {

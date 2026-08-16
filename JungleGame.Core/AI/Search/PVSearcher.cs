@@ -97,7 +97,7 @@ internal sealed class PVSearcher
                 retry = false;
                 currentBest = int.MinValue;
 
-                _ordering.OrderMoves(root, moves, moveCount, bestMoveForOrdering, 0);
+                _ordering.OrderMoves(root, moves, moveCount, bestMoveForOrdering, 0, 0);
 
                 for (int i = 0; i < moveCount; i++)
                 {
@@ -118,12 +118,12 @@ internal sealed class PVSearcher
                         // results): with proper cutoffs, the narrow aspiration
                         // window stores bound entries that steer later searches
                         // toward repetition lines in equal positions.
-                        score = -PVSearch(child, depth - 1, searchAlpha, searchBeta, 1, sw, token);
+                        score = -PVSearch(child, depth - 1, searchAlpha, searchBeta, 1, 0, 0, sw, token);
                     else
                     {
-                        score = -PVSearch(child, depth - 1, -(currentBest + 1), -currentBest, 1, sw, token);
+                        score = -PVSearch(child, depth - 1, -(currentBest + 1), -currentBest, 1, 0, 0, sw, token);
                         if (score > currentBest)
-                            score = -PVSearch(child, depth - 1, -searchBeta, -currentBest, 1, sw, token);
+                            score = -PVSearch(child, depth - 1, -searchBeta, -currentBest, 1, 0, 0, sw, token);
                     }
 
                     _context.ReleaseBoard(child);
@@ -167,7 +167,7 @@ internal sealed class PVSearcher
         return ToPublicMove(bestMove);
     }
 
-    private int PVSearch(SearchBoard board, int depth, int alpha, int beta, int ply, Stopwatch sw, CancellationToken token)
+    private int PVSearch(SearchBoard board, int depth, int alpha, int beta, int ply, int prevPacked, int extensions, Stopwatch sw, CancellationToken token)
     {
         Nodes++;
         if (_time.Check(sw, token))
@@ -204,7 +204,7 @@ internal sealed class PVSearcher
         {
             const int nullReduction = 2;
             board.MakeNullMove();
-            int nullScore = -PVSearch(board, depth - 1 - nullReduction, -beta, -(beta - 1), ply + 1, sw, token);
+            int nullScore = -PVSearch(board, depth - 1 - nullReduction, -beta, -(beta - 1), ply + 1, 0, extensions, sw, token);
             board.UnmakeNullMove();
             if (_time.Check(sw, token))
                 return 0;
@@ -213,7 +213,7 @@ internal sealed class PVSearcher
             {
                 // Verification: a reduced-depth real search of this node must
                 // confirm the cutoff (catches zugzwang the guards missed)
-                int verifyScore = PVSearch(board, depth - 1 - nullReduction, alpha, beta, ply, sw, token);
+                int verifyScore = PVSearch(board, depth - 1 - nullReduction, alpha, beta, ply, 0, extensions, sw, token);
                 if (_time.Check(sw, token))
                     return 0;
                 if (verifyScore >= beta)
@@ -228,7 +228,7 @@ internal sealed class PVSearcher
         if (moveCount == 0)
             return -(TranspositionTable.MateScore - ply);
 
-        _ordering.OrderMoves(board, moves, moveCount, ttMove, ply);
+        _ordering.OrderMoves(board, moves, moveCount, ttMove, ply, prevPacked);
 
         SearchMove bestMove = moves[0];
         int bestScore = int.MinValue;
@@ -260,6 +260,8 @@ internal sealed class PVSearcher
             }
 
             var move = moves[i];
+            bool denSetup = !_options.LegacySearch && !move.IsCapture && !move.EntersDen
+                && SearchBoard.IsAdjacentToOppDen[move.To, side];
 
             if (futilityApplicable && !move.IsCapture && !move.EntersDen
                 && !SearchBoard.IsEnemyTrapSquare(move.To, side)
@@ -267,7 +269,28 @@ internal sealed class PVSearcher
                 && staticEval + FutilityMargin <= alpha)
                 continue;
 
+            // Late move pruning: the quiet tail of a low-depth node is unlikely
+            // to beat alpha, so it is skipped. Den entries and den-setup moves
+            // are exempt (their tactical value is invisible statically), as are
+            // mate windows and near-zugzwang piece counts.
+            if (!_options.LegacySearch && depth <= 3 && !move.IsCapture && !move.EntersDen
+                && !denSetup && i >= 4 + depth * depth
+                && alpha > -MateThreshold && alpha < MateThreshold
+                && board.PieceCount(side) > 2)
+                continue;
+
             anySearched = true;
+
+            // Den-threat extension: a quiet move onto an enemy-den setup square
+            // starts a den race the horizon can miss, so the child gets one
+            // extra ply. Capped at 2 extensions per line, never at depth 1 or
+            // in mate windows (the futility layer handles the frontier).
+            bool extend = denSetup && depth >= 2 && depth <= 4
+                && extensions < 2
+                && alpha > -MateThreshold && beta < MateThreshold;
+            int childDepth = depth - 1 + (extend ? 1 : 0);
+            int childExtensions = extensions + (extend ? 1 : 0);
+            int packed = move.From | (move.To << 6);
 
             var child = _context.GetBoard();
             board.CopyTo(child);
@@ -275,29 +298,30 @@ internal sealed class PVSearcher
 
             int score;
             if (i == 0)
-                score = -PVSearch(child, depth - 1, -beta, -alpha, ply + 1, sw, token);
+                score = -PVSearch(child, childDepth, -beta, -alpha, ply + 1, packed, childExtensions, sw, token);
             else if (i >= 3 && depth >= 3 && !move.IsCapture)
             {
                 // Late move reduction: quiet moves late in the order are searched
                 // shallower with a null window; re-searched if they score well.
                 // The reduction scales with move index and depth; moves that enter
-                // a den, and the last couple of moves (small move sets), are exempt.
-                bool reduce = !_options.LegacySearch && !move.EntersDen && i < moveCount - 2;
+                // a den or set one up, and the last couple of moves (small move
+                // sets), are exempt.
+                bool reduce = !_options.LegacySearch && !move.EntersDen && !denSetup && i < moveCount - 2;
                 int reducedDepth = reduce
                     ? Math.Max(1, depth - 1 - (1 + (i >= 6 ? 1 : 0) + (depth >= 8 ? 1 : 0)))
                     : depth - 2;
 
-                score = -PVSearch(child, reducedDepth, -(alpha + 1), -alpha, ply + 1, sw, token);
+                score = -PVSearch(child, reducedDepth, -(alpha + 1), -alpha, ply + 1, packed, childExtensions, sw, token);
                 if (score > alpha)
-                    score = -PVSearch(child, depth - 1, -(alpha + 1), -alpha, ply + 1, sw, token);
+                    score = -PVSearch(child, childDepth, -(alpha + 1), -alpha, ply + 1, packed, childExtensions, sw, token);
                 if (score > alpha && score < beta)
-                    score = -PVSearch(child, depth - 1, -beta, -alpha, ply + 1, sw, token);
+                    score = -PVSearch(child, childDepth, -beta, -alpha, ply + 1, packed, childExtensions, sw, token);
             }
             else
             {
-                score = -PVSearch(child, depth - 1, -(alpha + 1), -alpha, ply + 1, sw, token);
+                score = -PVSearch(child, childDepth, -(alpha + 1), -alpha, ply + 1, packed, childExtensions, sw, token);
                 if (score > alpha && score < beta)
-                    score = -PVSearch(child, depth - 1, -beta, -alpha, ply + 1, sw, token);
+                    score = -PVSearch(child, childDepth, -beta, -alpha, ply + 1, packed, childExtensions, sw, token);
             }
 
             _context.ReleaseBoard(child);
@@ -313,7 +337,7 @@ internal sealed class PVSearcher
                 // Beta cutoff — this is a lower bound. Heuristic tables and the TT
                 // must not be touched by scores from aborted searches.
                 if (!_time.Aborted)
-                    _ordering.OnBetaCutoff(move, depth, ply);
+                    _ordering.OnBetaCutoff(move, depth, ply, prevPacked);
 
                 if (!_time.Aborted)
                     _tt.Store(board.Hash, depth, AdjustMateForStore(score, ply),

@@ -15,12 +15,15 @@ internal sealed class MoveOrdering
 {
     private const int KillerBonus1 = 900;
     private const int KillerBonus2 = 800;
+    private const int CountermoveBonus = 750;
     private const int HistoryScoreCap = 500;
     private const int SeeSignBonus = 50;
 
     private readonly bool _useSee; // disabled by legacySearch (A/B strength tests)
     private readonly int[,] _killerMoves = new int[PVSearcher.MaxPly, 2];
     private readonly int[,] _historyTable = new int[Zobrist.PositionCount, Zobrist.PositionCount];
+    private readonly int[,] _counterMoves = new int[Zobrist.PositionCount, Zobrist.PositionCount];
+    private readonly int[,,] _captureHistory = new int[9, Zobrist.PositionCount, Zobrist.PositionCount]; // by victim rank
     private readonly int[] _scoreScratch = new int[SearchBoard.MaxMovesPerPly];
 
     internal MoveOrdering(bool useSee)
@@ -28,7 +31,7 @@ internal sealed class MoveOrdering
         _useSee = useSee;
     }
 
-    internal int MoveScore(SearchBoard board, in SearchMove move, Move ttMove, int ply)
+    internal int MoveScore(SearchBoard board, in SearchMove move, Move ttMove, int ply, int prevPacked)
     {
         if (ttMove.From.Row * 7 + ttMove.From.Col == move.From &&
             ttMove.To.Row * 7 + ttMove.To.Col == move.To)
@@ -37,12 +40,14 @@ internal sealed class MoveOrdering
         if (move.IsCapture)
         {
             // MVV-LVA ordering; the SEE sign splits winning from losing
-            // exchanges (a capture that loses material searches last).
+            // exchanges (a capture that loses material searches last), and
+            // capture history refines by how often the capture refuted.
             int victimRank = SearchBoard.RankOf[move.CapturedId];
             int attackerRank = SearchBoard.RankOf[board.Occupant(move.From)];
             int captureScore = victimRank * 100 - attackerRank;
             if (_useSee)
                 captureScore += SeeCalculator.See(board, move) >= 0 ? SeeSignBonus : -SeeSignBonus;
+            captureScore += Math.Min(_captureHistory[victimRank, move.From, move.To], HistoryScoreCap);
             return captureScore;
         }
 
@@ -58,16 +63,24 @@ internal sealed class MoveOrdering
                 score = KillerBonus2;
         }
 
+        // Countermove heuristic: the quiet reply that refuted the parent's move
+        if (prevPacked != 0 && ply < PVSearcher.MaxPly)
+        {
+            int packed = move.From | (move.To << 6);
+            if (_counterMoves[prevPacked & 63, (prevPacked >> 6) & 63] == packed)
+                score = Math.Max(score, CountermoveBonus);
+        }
+
         // History heuristic bonus
         score += Math.Min(_historyTable[move.From, move.To], HistoryScoreCap);
         return score;
     }
 
     /// <summary>Insertion sort by precomputed move score (n is small and nearly sorted after iteration 1).</summary>
-    internal void OrderMoves(SearchBoard board, SearchMove[] moves, int count, Move ttMove, int ply)
+    internal void OrderMoves(SearchBoard board, SearchMove[] moves, int count, Move ttMove, int ply, int prevPacked)
     {
         for (int i = 0; i < count; i++)
-            _scoreScratch[i] = MoveScore(board, moves[i], ttMove, ply);
+            _scoreScratch[i] = MoveScore(board, moves[i], ttMove, ply, prevPacked);
 
         for (int i = 1; i < count; i++)
         {
@@ -111,27 +124,47 @@ internal sealed class MoveOrdering
         int victimRank = move.IsCapture ? SearchBoard.RankOf[move.CapturedId] : 9; // den entries rank first
         int attackerRank = SearchBoard.RankOf[board.Occupant(move.From)];
         int score = victimRank * 10 - attackerRank;
-        if (move.IsCapture && _useSee)
-            score += SeeCalculator.See(board, move) >= 0 ? SeeSignBonus : -SeeSignBonus;
+        if (move.IsCapture)
+        {
+            if (_useSee)
+                score += SeeCalculator.See(board, move) >= 0 ? SeeSignBonus : -SeeSignBonus;
+            score += Math.Min(_captureHistory[victimRank, move.From, move.To], HistoryScoreCap);
+        }
         return score;
     }
 
-    /// <summary>Records a beta-cutoff killer/history update (quiet moves only).</summary>
-    internal void OnBetaCutoff(in SearchMove move, int depth, int ply)
+    /// <summary>Records a beta-cutoff heuristic update (killers, history, countermove, capture history).</summary>
+    internal void OnBetaCutoff(in SearchMove move, int depth, int ply, int prevPacked)
     {
-        if (move.IsCapture || ply >= PVSearcher.MaxPly)
+        if (ply >= PVSearcher.MaxPly)
             return;
+
+        if (move.IsCapture)
+        {
+            _captureHistory[SearchBoard.RankOf[move.CapturedId], move.From, move.To] += depth * depth;
+            return;
+        }
+
         int packed = move.From | (move.To << 6);
         _killerMoves[ply, 1] = _killerMoves[ply, 0];
         _killerMoves[ply, 0] = packed;
         _historyTable[move.From, move.To] += depth * depth;
+
+        if (prevPacked != 0)
+            _counterMoves[prevPacked & 63, (prevPacked >> 6) & 63] = packed;
     }
 
     /// <summary>Halve all history scores so recent refutations dominate stale ones.</summary>
     internal void AgeHistoryTable()
     {
         for (int f = 0; f < Zobrist.PositionCount; f++)
+        {
             for (int t = 0; t < Zobrist.PositionCount; t++)
+            {
                 _historyTable[f, t] /= 2;
+                for (int r = 1; r <= 8; r++)
+                    _captureHistory[r, f, t] /= 2;
+            }
+        }
     }
 }

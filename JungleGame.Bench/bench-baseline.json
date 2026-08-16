@@ -4,12 +4,12 @@
     {
       "Line": 5,
       "Depth": 10,
-      "Nodes": 338868
+      "Nodes": 98627
     },
     {
       "Line": 8,
       "Depth": 10,
-      "Nodes": 161678
+      "Nodes": 70549
     },
     {
       "Line": 12,
@@ -24,7 +24,7 @@
     {
       "Line": 20,
       "Depth": 8,
-      "Nodes": 1236
+      "Nodes": 1186
     }
   ]
 }
