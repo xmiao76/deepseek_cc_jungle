@@ -52,18 +52,28 @@ AI Difficulty
 Notes
 -----
 - The AI uses iterative-deepening alpha-beta search (PVS) with aspiration
-  windows, late move reductions, null-move and futility pruning, killer/history
-  move ordering, quiescence search, a bucketed transposition table,
-  mate-distance scoring, repetition detection, and positional evaluation terms
-  for den threats, trap handling, and river play. It typically reaches 11+
-  plies in 2 seconds.
+  windows, late move reductions, null-move and futility pruning, static
+  exchange evaluation, late move pruning, a den-threat extension,
+  killer/countermove/history move ordering, quiescence search, a bucketed
+  transposition table, mate-distance scoring, repetition detection with draw
+  contempt, and positional evaluation terms for den threats, trap handling,
+  and river play. It typically reaches 12 plies in 2 seconds.
+- While the AI is thinking, the status line shows the live search progress
+  (depth, nodes per second, and tablebase hits).
 - The difficulty setting only changes the per-move time budget; the engine
   keeps its search memory across games.
 - Game saves are not supported in this version.
 
+Endgame Tablebase (optional)
+----------------------------
+- The folder contains jungle3.tb, a tablebase with perfect play for all
+  positions with 3 pieces or fewer (built by retrograde analysis; 148 MB).
+  Keep it next to JungleGame.UI.exe and the AI plays those endgames
+  perfectly. Without it, the game works normally with search-only play.
+
 Build Info
 ----------
-- Version: 1.1.0
+- Version: 1.2.0
 - Built with .NET 8.0 (self-contained, win-x64, single file)
 - Code agent: Claude Code (Anthropic CLI)
 - AI model: DeepSeek V4 Pro (1M context window)
