@@ -19,11 +19,14 @@ public class MinimaxEngine
 
     /// <param name="legacyEval">Disables the P3 evaluation terms (A/B strength tests).</param>
     /// <param name="legacySearch">Disables the post-P3 search features (A/B strength tests).</param>
+    /// <param name="useTablebase">Probes the endgame tables (default on; the tactical
+    /// suite pins pure-search behavior and disables it).</param>
     public MinimaxEngine(
         TimeSpan? timeLimit = null,
         int? maxDepth = null,
         bool legacyEval = false,
-        bool legacySearch = false)
+        bool legacySearch = false,
+        bool useTablebase = true)
     {
         _tt = new TranspositionTable(1 << 20);
         _time = new TimeManager(timeLimit ?? TimeSpan.FromSeconds(4));
@@ -32,7 +35,7 @@ public class MinimaxEngine
             _time,
             new MoveOrdering(useSee: !legacySearch),
             new SearchContext(),
-            new SearchOptions(legacyEval, legacySearch),
+            new SearchOptions(legacyEval, legacySearch, useTablebase),
             maxDepth);
         TablebaseProbe.Initialize(); // idempotent: loads the table once if present
     }

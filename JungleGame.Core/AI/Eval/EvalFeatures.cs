@@ -45,4 +45,6 @@ internal struct EvalFeatures
     internal int EndgameAdvanceOpp;
     internal int BackRankMy; // pieces on the home row (development gate passed)
     internal int BackRankOpp;
+    internal int RatNearOppDenMy; // Rats within Manhattan 2 of the opponent's den (candidate feature)
+    internal int RatNearOppDenOpp;
 }

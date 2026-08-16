@@ -51,6 +51,10 @@ switch (args[0])
         return TbRunner.RunBuild(args);
     case "--tb-verify":
         return TbRunner.RunVerify(args);
+    case "--gen-data":
+        return TuneRunner.RunGenData(args);
+    case "--tune":
+        return TuneRunner.RunTune(args);
     default:
         PrintUsage();
         return 1;
@@ -189,4 +193,7 @@ static void PrintUsage()
     Console.WriteLine("  JungleGame.Bench --testsuite [--file <path.tsuite>]");
     Console.WriteLine("  JungleGame.Bench --tb-build [--path <dir>]");
     Console.WriteLine("  JungleGame.Bench --tb-verify [--samples <n>] [--seed <n>]");
+    Console.WriteLine("  JungleGame.Bench --gen-data [--games <n>] [--depth <n>] [--depthB <n>]");
+    Console.WriteLine("                     [--parallel <n>] [--out <file>]");
+    Console.WriteLine("  JungleGame.Bench --tune [--data <file>] [--epochs <n>] [--lr <x>] [--out <file>]");
 }

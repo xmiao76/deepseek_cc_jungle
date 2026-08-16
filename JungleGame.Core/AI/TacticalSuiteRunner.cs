@@ -19,7 +19,10 @@ public static class TacticalSuiteRunner
 
     public static SuiteRunResult Run(TestSuiteEntry entry)
     {
-        var engine = new MinimaxEngine(TimeSpan.FromMilliseconds(TimeBudgetMs), entry.SearchDepth);
+        // Tablebase probing disabled: the suite pins the pure-search behavior
+        // (with the table loaded, a proven-but-slower capture can legitimately
+        // outrank a pinned mate move via the forced-win early exit).
+        var engine = new MinimaxEngine(TimeSpan.FromMilliseconds(TimeBudgetMs), entry.SearchDepth, useTablebase: false);
         Move? move = engine.FindBestMove(entry.State);
 
         if (move == null)

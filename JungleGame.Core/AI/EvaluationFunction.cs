@@ -18,8 +18,17 @@ public static class EvaluationFunction
     /// With legacyEval, the P3 terms (doomed-piece bonus, den escort) are disabled —
     /// used only by the self-play harness for A/B strength validation.
     /// </summary>
+    private static EvalParameters _current = EvalParameters.Default;
+
+    /// <summary>
+    /// The weight vector in use. The tuning harness adopts a fitted vector via
+    /// <see cref="SetParameters"/>; the default is the historical hand-tuned
+    /// constants.
+    /// </summary>
+    internal static void SetParameters(EvalParameters parameters) => _current = parameters;
+
     internal static int Evaluate(SearchBoard board, int side, int myMobility, int oppMobility, bool legacyEval = false)
-        => EvaluateStatic(board, side, legacyEval) + (myMobility - oppMobility) * EvalParameters.MobilityWeight;
+        => EvaluateStatic(board, side, legacyEval) + (myMobility - oppMobility) * _current.MobilityWeight;
 
     /// <summary>
     /// Everything <see cref="Evaluate"/> computes except the mobility term, which
@@ -29,7 +38,7 @@ public static class EvaluationFunction
     internal static int EvaluateStatic(SearchBoard board, int side, bool legacyEval = false)
     {
         var features = EvalFeatureExtractor.ExtractStatic(board, side, legacyEval);
-        return EvalParameters.Dot(features);
+        return _current.Dot(features);
     }
 
     /// <summary>

@@ -164,6 +164,13 @@ internal static class EvalFeatureExtractor
             {
                 if (forMe) f.RatInWaterMy++; else f.RatInWaterOpp++;
             }
+
+            // Candidate feature: Rat close to the opponent's den (weight 0 by
+            // default — the tuner decides).
+            if (distToOppDen <= 2)
+            {
+                if (forMe) f.RatNearOppDenMy++; else f.RatNearOppDenOpp++;
+            }
         }
 
         // Elephant safety: penalty for being near opponent's Rat
@@ -235,6 +242,36 @@ internal static class EvalFeatureExtractor
         {
             if (forMe) f.BackRankMy++; else f.BackRankOpp++;
         }
+    }
+
+    /// <summary>
+    /// Serializes the features (+ the caller-supplied mobility delta) into a
+    /// double vector in the same order as EvalParameters.ToVector (tuning
+    /// harness — the dot product becomes v[weights] · v[features]).
+    /// </summary>
+    internal static void ToVector(in EvalFeatures f, int mobilityDelta, double[] v, int offset)
+    {
+        v[offset + 0] = f.MaterialMy - f.MaterialOpp;
+        v[offset + 1] = f.ForwardMy - f.ForwardOpp;
+        v[offset + 2] = f.DenOffenseMy - f.DenOffenseOpp;
+        v[offset + 3] = f.DenGuardMy - f.DenGuardOpp;
+        v[offset + 4] = -f.TrapMy + f.TrapOpp;
+        v[offset + 5] = -f.DoomedRankSumMy + f.DoomedRankSumOpp;
+        v[offset + 6] = f.EscortMy - f.EscortOpp;
+        v[offset + 7] = f.RiverBankMy - f.RiverBankOpp;
+        v[offset + 8] = f.JumpPathMy - f.JumpPathOpp;
+        v[offset + 9] = f.RatNearWaterMy - f.RatNearWaterOpp;
+        v[offset + 10] = f.RatInWaterMy - f.RatInWaterOpp;
+        v[offset + 11] = -f.ElephantFearMy + f.ElephantFearOpp;
+        v[offset + 12] = -f.StrongerThreatSumMy + f.StrongerThreatSumOpp;
+        v[offset + 13] = -f.EqualThreatSumMy + f.EqualThreatSumOpp;
+        v[offset + 14] = -f.RatElephantMy + f.RatElephantOpp;
+        v[offset + 15] = mobilityDelta;
+        v[offset + 16] = -f.DenThreatExcess;
+        v[offset + 17] = -f.EndgameDenThreat;
+        v[offset + 18] = f.EndgameAdvanceMy - f.EndgameAdvanceOpp;
+        v[offset + 19] = -f.BackRankMy + f.BackRankOpp;
+        v[offset + 20] = f.RatNearOppDenMy - f.RatNearOppDenOpp;
     }
 
     private static int TotalMaterialOnBoard(SearchBoard board)

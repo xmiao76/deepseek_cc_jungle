@@ -149,7 +149,7 @@ public class MinimaxEngineTests
             [new Position(6, 8)] = new Piece(Animal.Rat, Player.Red, new Position(6, 8))
         }, Player.Blue);
 
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5), 2);
+        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5), 2, useTablebase: false);
         var move = engine.FindBestMove(state);
 
         Assert.NotNull(move);
@@ -172,7 +172,7 @@ public class MinimaxEngineTests
             [new Position(0, 8)] = new Piece(Animal.Rat, Player.Red, new Position(0, 8))
         }, Player.Blue);
 
-        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5), 2);
+        var engine = new MinimaxEngine(TimeSpan.FromSeconds(5), 2, useTablebase: false);
         var move = engine.FindBestMove(state);
 
         Assert.NotNull(move);

@@ -79,7 +79,7 @@ internal sealed class PVSearcher
 
         // A tablebase root position: seed the ordering with the tablebase move
         // (the search still runs — the opponent may err against imperfect play).
-        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+        if (_options.EnableTablebase && TablebaseProbe.IsLoaded
             && root.PieceCount(0) + root.PieceCount(1) <= 3
             && TablebaseProbe.TryProbeWithMove(root, 0, out _, out Move? tbRootMove)
             && tbRootMove != null)
@@ -133,7 +133,10 @@ internal sealed class PVSearcher
                     else
                     {
                         score = -PVSearch(child, depth - 1, -(currentBest + 1), -currentBest, 1, 0, 0, sw, token);
-                        if (score > currentBest)
+                        // Re-search on a tie as well: a null-window fail-high at
+                        // exactly currentBest may hide a HIGHER true value (e.g.,
+                        // a tablebase score at the window boundary).
+                        if (score >= currentBest)
                             score = -PVSearch(child, depth - 1, -searchBeta, -currentBest, 1, 0, 0, sw, token);
                     }
 
@@ -196,7 +199,7 @@ internal sealed class PVSearcher
         // Tablebase probe: exact WDL for ≤ 3-piece positions (also before the
         // TT — a probed bound must not mask the exact value). legacySearch
         // disables probing (A/B flag).
-        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+        if (_options.EnableTablebase && TablebaseProbe.IsLoaded
             && board.PieceCount(0) + board.PieceCount(1) <= 3
             && TablebaseProbe.TryProbe(board, ply, out int tbScore))
         {
@@ -409,7 +412,7 @@ internal sealed class PVSearcher
 
         // A ≤ 3-piece position is fully resolved by the tablebase — return the
         // exact score instead of searching captures.
-        if (!_options.LegacySearch && TablebaseProbe.IsLoaded
+        if (_options.EnableTablebase && TablebaseProbe.IsLoaded
             && board.PieceCount(0) + board.PieceCount(1) <= 3
             && TablebaseProbe.TryProbe(board, ply, out int tbQScore))
             return tbQScore;
