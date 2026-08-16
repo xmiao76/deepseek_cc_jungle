@@ -88,10 +88,18 @@ internal sealed class PVSearcher
         }
 
         int bestScore = int.MinValue;
+        int stableDepthCount = 0; // consecutive iterations with the same best move
 
         for (int depth = 1; depth <= _maxDepth; depth++)
         {
             if (_time.Check(sw, token))
+                break;
+
+            // Easy move: the best move has been stable for two iterations at a
+            // meaningful depth and the budget is mostly spent — stop and keep
+            // the completed result instead of starting another iteration.
+            if (stableDepthCount >= 2 && depth >= 6 &&
+                sw.Elapsed.Ticks >= _time.BudgetTicks * 35 / 100)
                 break;
 
             int currentBest = int.MinValue;
@@ -166,11 +174,16 @@ internal sealed class PVSearcher
             // Only accept results from fully completed depths
             if (!_time.Check(sw, token))
             {
+                var prevBestMove = bestMove;
                 bestScore = currentBest;
                 bestMove = currentBestMove;
                 bestMoveForOrdering = ToPublicMove(currentBestMove);
                 LastCompletedDepth = depth;
                 _ordering.AgeHistoryTable();
+
+                stableDepthCount = currentBestMove.From == prevBestMove.From && currentBestMove.To == prevBestMove.To
+                    ? stableDepthCount + 1
+                    : 1;
             }
 
             // A forced win was found — no deeper search needed
@@ -192,9 +205,12 @@ internal sealed class PVSearcher
             return TerminalScore(board.WinnerSide, board.Turn, ply);
 
         // Three-fold repetition → draw (checked before the TT probe: the hash carries
-        // no repetition state, so a probed score would mask the draw)
+        // no repetition state, so a probed score would mask the draw). With
+        // contempt on, the draw is scored asymmetrically: the side that
+        // believes it stands better avoids the repetition, the worse side
+        // seeks it.
         if (_context.IsRepetition(board.Hash))
-            return 0;
+            return DrawScore(board);
 
         // Tablebase probe: exact WDL for ≤ 3-piece positions (also before the
         // TT — a probed bound must not mask the exact value). legacySearch
@@ -203,8 +219,14 @@ internal sealed class PVSearcher
             && board.PieceCount(0) + board.PieceCount(1) <= 3
             && TablebaseProbe.TryProbe(board, ply, out int tbScore))
         {
-            _tt.Store(board.Hash, 127, AdjustMateForStore(tbScore, ply), default, BoundType.Exact);
-            return tbScore;
+            if (tbScore != 0)
+            {
+                _tt.Store(board.Hash, 127, AdjustMateForStore(tbScore, ply), default, BoundType.Exact);
+                return tbScore;
+            }
+            // A tablebase draw gets the same contempt treatment as a repetition
+            // draw (never stored — the bias is a search-time policy).
+            return DrawScore(board);
         }
 
         // TT probe
@@ -411,11 +433,12 @@ internal sealed class PVSearcher
             return TerminalScore(board.WinnerSide, board.Turn, ply);
 
         // A ≤ 3-piece position is fully resolved by the tablebase — return the
-        // exact score instead of searching captures.
+        // exact score instead of searching captures (draws get the contempt
+        // treatment like repetitions).
         if (_options.EnableTablebase && TablebaseProbe.IsLoaded
             && board.PieceCount(0) + board.PieceCount(1) <= 3
             && TablebaseProbe.TryProbe(board, ply, out int tbQScore))
-            return tbQScore;
+            return tbQScore != 0 ? tbQScore : DrawScore(board);
 
         int side = board.Turn;
 
@@ -493,6 +516,19 @@ internal sealed class PVSearcher
     /// <summary>Score of a finished game, from the perspective of the side to move.</summary>
     private static int TerminalScore(byte winnerSide, int sideToMove, int ply) =>
         winnerSide == sideToMove ? TranspositionTable.MateScore - ply : ply - TranspositionTable.MateScore;
+
+    /// <summary>
+    /// Draw score with contempt: the side whose static evaluation is non-
+    /// negative avoids the draw (scores it below zero), the worse side seeks
+    /// it (scores it above zero). The magnitude is the contempt centipawns.
+    /// </summary>
+    private int DrawScore(SearchBoard board)
+    {
+        if (_options.Contempt == 0)
+            return 0;
+        int staticEval = EvaluationFunction.EvaluateStatic(board, board.Turn, _options.LegacyEval);
+        return staticEval >= 0 ? -_options.Contempt : _options.Contempt;
+    }
 
     /// <summary>
     /// Convert a root-relative mate score into a node-relative score before storing.

@@ -8,11 +8,13 @@ internal readonly struct SearchOptions
     internal readonly bool LegacyEval;     // disables the P3 evaluation terms
     internal readonly bool LegacySearch;   // disables the post-P3 search features
     internal readonly bool EnableTablebase; // probes the endgame tables (default on)
+    internal readonly int Contempt;        // draw-avoidance bias in centipawns (0 = off)
 
-    internal SearchOptions(bool legacyEval, bool legacySearch, bool enableTablebase = true)
+    internal SearchOptions(bool legacyEval, bool legacySearch, bool enableTablebase = true, int contempt = 30)
     {
         LegacyEval = legacyEval;
         LegacySearch = legacySearch;
         EnableTablebase = enableTablebase;
+        Contempt = contempt;
     }
 }

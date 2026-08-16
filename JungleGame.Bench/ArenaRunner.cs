@@ -28,6 +28,8 @@ internal static class ArenaRunner
         string? openingsFile = Args.ReadString(args, "--openings-file");
         int imbalanced = Args.ReadInt(args, "--openings-imbalanced", 0);
         bool smoke = args.Contains("--smoke");
+        int contemptA = Args.ReadInt(args, "--contemptA", 30);
+        int contemptB = Args.ReadInt(args, "--contemptB", 30);
 
         var openings = Openings.Load(openingsFile, imbalanced, seed);
         int pairs = openingsFile != null || imbalanced > 0
@@ -37,7 +39,8 @@ internal static class ArenaRunner
         string source = openingsFile ?? (imbalanced > 0 ? $"imbalanced ×{imbalanced}" : "classic start");
         Console.WriteLine($"Arena: {pairs * 2} games = {pairs} openings × 2 colors " +
             $"(A {timeA} ms, B {timeB} ms{(legacyB ? ", B legacy eval" : "")}" +
-            $"{(legacySearchA ? ", A legacy search" : "")}{(legacySearchB ? ", B legacy search" : "")})");
+            $"{(legacySearchA ? ", A legacy search" : "")}{(legacySearchB ? ", B legacy search" : "")}" +
+            $", contempt A={contemptA} B={contemptB})");
         Console.WriteLine($"Openings: {source} (seed {seed})");
         Console.WriteLine();
 
@@ -49,7 +52,7 @@ internal static class ArenaRunner
             {
                 bool aIsBlue = color == 0;
                 var (wA, wB, d, moves, status) = PlayGame(
-                    opening, aIsBlue, timeA, timeB, legacyB, legacySearchA, legacySearchB);
+                    opening, aIsBlue, timeA, timeB, legacyB, legacySearchA, legacySearchB, contemptA, contemptB);
 
                 winsA += wA;
                 winsB += wB;
@@ -81,12 +84,12 @@ internal static class ArenaRunner
 
     private static (int WinsA, int WinsB, int Draws, int Moves, GameStatus Status) PlayGame(
         GameState opening, bool aIsBlue, int timeA, int timeB,
-        bool legacyB, bool legacySearchA, bool legacySearchB)
+        bool legacyB, bool legacySearchA, bool legacySearchB, int contemptA, int contemptB)
     {
         // Fresh engines per game: uncorrelated results (the shared-TT protocol of
         // the legacy --selfplay mode biases later games).
-        var engineA = new MinimaxEngine(TimeSpan.FromMilliseconds(timeA), legacySearch: legacySearchA);
-        var engineB = new MinimaxEngine(TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB);
+        var engineA = new MinimaxEngine(TimeSpan.FromMilliseconds(timeA), legacySearch: legacySearchA, contempt: contemptA);
+        var engineB = new MinimaxEngine(TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB, contempt: contemptB);
 
         var state = opening;
         int moves = 0;

@@ -16,6 +16,7 @@ internal sealed class TimeManager
     private const int CheckCadence = 4096;
 
     private long _timeLimitTicks; // Interlocked: SetTimeLimit may race a running search
+    private long _maxNodes;       // optional fixed-node budget (0 = unlimited)
     private int _counter;
     private bool _aborted;
 
@@ -24,6 +25,12 @@ internal sealed class TimeManager
     /// <summary>Changes the per-move time budget (difficulty); observed at the next check.</summary>
     internal void SetTimeLimit(TimeSpan timeLimit) =>
         Interlocked.Exchange(ref _timeLimitTicks, timeLimit.Ticks);
+
+    /// <summary>The raw wall-clock budget (used by the easy-move percentage rule).</summary>
+    internal long BudgetTicks => Interlocked.Read(ref _timeLimitTicks);
+
+    /// <summary>Optional fixed-node budget for deterministic tests (0 = unlimited).</summary>
+    internal void SetNodeBudget(long maxNodes) => Interlocked.Exchange(ref _maxNodes, maxNodes);
 
     internal bool Aborted => _aborted;
 
@@ -40,7 +47,9 @@ internal sealed class TimeManager
         _counter++;
         if ((_counter & (CheckCadence - 1)) == 0)
         {
-            if (sw.Elapsed.Ticks >= Interlocked.Read(ref _timeLimitTicks) || token.IsCancellationRequested)
+            if (sw.Elapsed.Ticks >= Interlocked.Read(ref _timeLimitTicks) ||
+                token.IsCancellationRequested ||
+                (Interlocked.Read(ref _maxNodes) > 0 && _counter >= Interlocked.Read(ref _maxNodes)))
                 _aborted = true;
         }
         else if (token.IsCancellationRequested)

@@ -21,21 +21,27 @@ public class MinimaxEngine
     /// <param name="legacySearch">Disables the post-P3 search features (A/B strength tests).</param>
     /// <param name="useTablebase">Probes the endgame tables (default on; the tactical
     /// suite pins pure-search behavior and disables it).</param>
+    /// <param name="contempt">Draw-avoidance bias in centipawns (default 30; 0 = off).</param>
+    /// <param name="maxNodes">Optional fixed-node budget for deterministic tests.</param>
     public MinimaxEngine(
         TimeSpan? timeLimit = null,
         int? maxDepth = null,
         bool legacyEval = false,
         bool legacySearch = false,
-        bool useTablebase = true)
+        bool useTablebase = true,
+        int contempt = 30,
+        long? maxNodes = null)
     {
         _tt = new TranspositionTable(1 << 20);
         _time = new TimeManager(timeLimit ?? TimeSpan.FromSeconds(4));
+        if (maxNodes.HasValue)
+            _time.SetNodeBudget(maxNodes.Value);
         _searcher = new PVSearcher(
             _tt,
             _time,
             new MoveOrdering(useSee: !legacySearch),
             new SearchContext(),
-            new SearchOptions(legacyEval, legacySearch, useTablebase),
+            new SearchOptions(legacyEval, legacySearch, useTablebase, contempt),
             maxDepth);
         TablebaseProbe.Initialize(); // idempotent: loads the table once if present
     }
