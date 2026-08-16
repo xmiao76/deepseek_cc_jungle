@@ -16,10 +16,17 @@ internal sealed class MoveOrdering
     private const int KillerBonus1 = 900;
     private const int KillerBonus2 = 800;
     private const int HistoryScoreCap = 500;
+    private const int SeeSignBonus = 50;
 
+    private readonly bool _useSee; // disabled by legacySearch (A/B strength tests)
     private readonly int[,] _killerMoves = new int[PVSearcher.MaxPly, 2];
     private readonly int[,] _historyTable = new int[Zobrist.PositionCount, Zobrist.PositionCount];
     private readonly int[] _scoreScratch = new int[SearchBoard.MaxMovesPerPly];
+
+    internal MoveOrdering(bool useSee)
+    {
+        _useSee = useSee;
+    }
 
     internal int MoveScore(SearchBoard board, in SearchMove move, Move ttMove, int ply)
     {
@@ -29,10 +36,14 @@ internal sealed class MoveOrdering
 
         if (move.IsCapture)
         {
-            // MVV-LVA ordering
+            // MVV-LVA ordering; the SEE sign splits winning from losing
+            // exchanges (a capture that loses material searches last).
             int victimRank = SearchBoard.RankOf[move.CapturedId];
             int attackerRank = SearchBoard.RankOf[board.Occupant(move.From)];
-            return victimRank * 100 - attackerRank;
+            int captureScore = victimRank * 100 - attackerRank;
+            if (_useSee)
+                captureScore += SeeCalculator.See(board, move) >= 0 ? SeeSignBonus : -SeeSignBonus;
+            return captureScore;
         }
 
         int score = 0;
@@ -95,11 +106,14 @@ internal sealed class MoveOrdering
         }
     }
 
-    private static int CaptureScore(SearchBoard board, in SearchMove move)
+    private int CaptureScore(SearchBoard board, in SearchMove move)
     {
         int victimRank = move.IsCapture ? SearchBoard.RankOf[move.CapturedId] : 9; // den entries rank first
         int attackerRank = SearchBoard.RankOf[board.Occupant(move.From)];
-        return victimRank * 10 - attackerRank;
+        int score = victimRank * 10 - attackerRank;
+        if (move.IsCapture && _useSee)
+            score += SeeCalculator.See(board, move) >= 0 ? SeeSignBonus : -SeeSignBonus;
+        return score;
     }
 
     /// <summary>Records a beta-cutoff killer/history update (quiet moves only).</summary>

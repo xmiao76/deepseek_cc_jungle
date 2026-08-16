@@ -74,10 +74,36 @@ internal sealed class SearchBoard
         }
     }
 
+    /// <summary>Jump spec in reverse: a square that jumps onto this square, with the mids crossed.</summary>
+    internal readonly struct JumpAttack
+    {
+        internal readonly byte From;
+        internal readonly byte Mid0;
+        internal readonly byte Mid1;
+        internal readonly byte Mid2;
+        internal readonly byte MidCount;
+
+        internal JumpAttack(byte from, byte m0, byte m1, byte m2, byte midCount)
+        {
+            From = from;
+            Mid0 = m0;
+            Mid1 = m1;
+            Mid2 = m2;
+            MidCount = midCount;
+        }
+
+        internal bool IsBlockedByRat(SearchBoard board) =>
+            (MidCount >= 1 && IsRat(board._squareIds[Mid0])) ||
+            (MidCount >= 2 && IsRat(board._squareIds[Mid1])) ||
+            (MidCount >= 3 && IsRat(board._squareIds[Mid2]));
+    }
+
     // ---- Precomputed static tables (built once from Board.Initial) ----
     internal static readonly byte[] TerrainOf = new byte[SquareCount];
     internal static readonly byte[] RankOf = new byte[MaxPieceIds + 1]; // piece id → rank 1..8
     internal static readonly byte[][] Neighbors = new byte[SquareCount][];
+    /// <summary>All jump landings onto each square (used by the SEE attacker scan).</summary>
+    internal static readonly JumpAttack[][] JumpAttackersTo = new JumpAttack[SquareCount][];
     private static readonly Jump[][] LionJumpsOf = new Jump[SquareCount][];
     private static readonly Jump[][] TigerJumpsOf = new Jump[SquareCount][];
 
@@ -124,6 +150,19 @@ internal sealed class SearchBoard
             LionJumpsOf[sq] = BuildJumps(c, r, includeRowChange: true);
             TigerJumpsOf[sq] = BuildJumps(c, r, includeRowChange: false);
         }
+
+        // Reverse jump table: for every square, the jumpers that can land on it
+        // (Lion covers both axes, so it alone enumerates every jump landing).
+        var attackersTo = new List<JumpAttack>[SquareCount];
+        for (int sq = 0; sq < SquareCount; sq++)
+            attackersTo[sq] = new List<JumpAttack>(4);
+        for (int sq = 0; sq < SquareCount; sq++)
+        {
+            foreach (var jump in LionJumpsOf[sq])
+                attackersTo[jump.Target].Add(new JumpAttack((byte)sq, jump.Mid0, jump.Mid1, jump.Mid2, jump.MidCount));
+        }
+        for (int sq = 0; sq < SquareCount; sq++)
+            JumpAttackersTo[sq] = attackersTo[sq].ToArray();
 
         static void AddIfValid(List<byte> list, int c, int r)
         {

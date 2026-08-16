@@ -409,6 +409,12 @@ internal sealed class PVSearcher
                 int victimGain = SearchBoard.EffectiveRankOf(move.CapturedId, move.To) * 100;
                 if (standPat + victimGain + DeltaMargin <= alpha)
                     continue;
+
+                // SEE pruning: a capture that loses the exchange never improves
+                // a quiet position (the opponent recaptures favorably), so it is
+                // not worth searching at the horizon.
+                if (SeeCalculator.See(board, move) < 0)
+                    continue;
             }
 
             var child = _context.GetBoard();

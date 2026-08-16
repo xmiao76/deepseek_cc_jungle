@@ -30,7 +30,7 @@ public class MinimaxEngine
         _searcher = new PVSearcher(
             _tt,
             _time,
-            new MoveOrdering(),
+            new MoveOrdering(useSee: !legacySearch),
             new SearchContext(),
             new SearchOptions(legacyEval, legacySearch),
             maxDepth);
