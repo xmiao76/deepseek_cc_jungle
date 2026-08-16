@@ -3,6 +3,24 @@ using JungleGame.Core.Model;
 
 namespace JungleGame.Core.AI;
 
+/// <summary>Public tablebase availability (the UI shows this next to the difficulty).</summary>
+public enum TablebaseAvailability
+{
+    NotPresent,
+    Loaded,
+    Corrupt,
+}
+
+/// <summary>
+/// Public tablebase surface for the UI (the probe itself is internal): the
+/// file availability and the lifetime probe-hit counter.
+/// </summary>
+public static class TablebaseInfo
+{
+    public static TablebaseAvailability Availability => TablebaseProbe.Availability;
+    public static long TotalHits => TablebaseProbe.TotalHits;
+}
+
 /// <summary>
 /// Tablebase access for the search: lazy one-time load from the exe directory,
 /// %LOCALAPPDATA%\JungleGame\tablebases, or JUNGLE_TB_PATH; silent degradation
@@ -34,6 +52,15 @@ internal static class TablebaseProbe
     internal static Status CurrentStatus => _status;
     internal static bool IsLoaded => _status == Status.Loaded;
     internal static long Hits => Interlocked.Read(ref _hits);
+
+    internal static TablebaseAvailability Availability => _status switch
+    {
+        Status.Loaded => TablebaseAvailability.Loaded,
+        Status.Corrupt => TablebaseAvailability.Corrupt,
+        _ => TablebaseAvailability.NotPresent,
+    };
+
+    internal static long TotalHits => Interlocked.Read(ref _hits);
 
     /// <summary>
     /// Test hook (InternalsVisibleTo): loads packed tables from memory without

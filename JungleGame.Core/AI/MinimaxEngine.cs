@@ -49,6 +49,9 @@ public class MinimaxEngine
     public long NodesSearched => _searcher.Nodes;
     public int LastCompletedDepth => _searcher.LastCompletedDepth;
 
+    /// <summary>Search statistics snapshot for the UI (updated per completed depth).</summary>
+    public EngineStats Stats => _searcher.Stats;
+
     /// <summary>
     /// Changes the per-move time budget (difficulty). A running search observes the
     /// new limit at its next check; the transposition table is kept, so strength

@@ -49,6 +49,22 @@ internal sealed class PVSearcher
     internal long Nodes { get; private set; }
     internal int LastCompletedDepth { get; private set; }
 
+    private EngineStats _stats;
+    private long _statsTicks;
+
+    /// <summary>Search statistics snapshot for the UI (updated per completed depth).</summary>
+    internal EngineStats Stats
+    {
+        get
+        {
+            long now = Stopwatch.GetTimestamp();
+            long nps = _statsTicks > 0 && now > _statsTicks
+                ? _stats.Nodes * Stopwatch.Frequency / (now - _statsTicks)
+                : 0;
+            return _stats with { NodesPerSecond = nps };
+        }
+    }
+
     internal Move? SearchBestMove(GameState state, CancellationToken token)
     {
         if (state.Status != GameStatus.InProgress)
@@ -184,6 +200,9 @@ internal sealed class PVSearcher
                 stableDepthCount = currentBestMove.From == prevBestMove.From && currentBestMove.To == prevBestMove.To
                     ? stableDepthCount + 1
                     : 1;
+
+                _stats = new EngineStats(depth, Nodes, 0, TablebaseProbe.Hits, bestScore);
+                _statsTicks = Stopwatch.GetTimestamp();
             }
 
             // A forced win was found — no deeper search needed

@@ -19,12 +19,21 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _aiThinking;
     private CancellationTokenSource? _aiCts;
     private readonly List<string> _moveHistory = new();
+    private readonly System.Windows.Threading.DispatcherTimer _statsTimer;
 
     public MainViewModel(int aiTimeMs = 1000) // Medium difficulty
     {
         _state = GameState.CreateInitial();
         _ai = new MinimaxEngine(TimeSpan.FromMilliseconds(aiTimeMs));
         _isHumanTurn = true;
+
+        // Refresh the status line while the AI searches so the depth/nps
+        // stats update live.
+        _statsTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250),
+        };
+        _statsTimer.Tick += (_, _) => OnPropertyChanged(nameof(StatusText));
     }
 
     public GameState State => _state;
@@ -78,7 +87,15 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             if (_state.Status != GameStatus.InProgress)
                 return GameStrings.StatusText(_state.Status);
             if (_aiThinking)
-                return "AI thinking...";
+            {
+                var stats = _ai.Stats;
+                string tb = TablebaseInfo.TotalHits > 0 || TablebaseInfo.Availability == TablebaseAvailability.Loaded
+                    ? $" · TB {stats.TablebaseHits}"
+                    : "";
+                return stats.Depth > 0
+                    ? $"AI thinking... depth {stats.Depth} · {stats.NodesPerSecond / 1000.0:F0}k nps{tb}"
+                    : "AI thinking...";
+            }
             return $"{_state.CurrentTurn}'s turn";
         }
     }
@@ -219,6 +236,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         var token = _aiCts.Token;
 
         AiThinking = true;
+        _statsTimer.Start();
         NotifyAll();
 
         var continueChain = false;
@@ -270,6 +288,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
         finally
         {
+            _statsTimer.Stop();
             AiThinking = false;
             NotifyAll();
         }
