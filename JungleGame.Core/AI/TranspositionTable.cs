@@ -10,23 +10,57 @@ public enum BoundType : byte
     UpperBound
 }
 
-public readonly struct TTEntry
+/// <summary>
+/// A packed transposition-table entry (24 bytes: 8 hash + 4 move + 4 score +
+/// 1 depth + 1 bound + 1 generation + padding). The best move packs the two
+/// squares (6 bits each) and the captured piece id (6 bits, 0 = none) into a
+/// uint; depth is a byte (searches never exceed 127).
+/// </summary>
+internal readonly struct TTEntry
 {
-    public ulong Hash { get; }
-    public byte Generation { get; }
-    public int Depth { get; }
-    public int Score { get; }
-    public Move BestMove { get; }
-    public BoundType Bound { get; }
+    internal readonly ulong Hash;
+    internal readonly uint Move;
+    internal readonly int Score;
+    internal readonly byte Depth;
+    internal readonly byte Bound;
+    internal readonly byte Generation;
 
-    public TTEntry(ulong hash, byte generation, int depth, int score, Move bestMove, BoundType bound)
+    internal TTEntry(ulong hash, byte generation, int depth, int score, Move bestMove, BoundType bound)
     {
         Hash = hash;
         Generation = generation;
-        Depth = depth;
+        Depth = (byte)Math.Min(depth, 255);
         Score = score;
-        BestMove = bestMove;
-        Bound = bound;
+        Bound = (byte)bound;
+        Move = PackMove(bestMove);
+    }
+
+    internal Move BestMove => UnpackMove(Move);
+
+    internal static uint PackMove(Move move)
+    {
+        int from = move.From.Row * 7 + move.From.Col;
+        int to = move.To.Row * 7 + move.To.Col;
+        int capturedId = move.Captured == null
+            ? 0
+            : ((int)move.Captured.Value.Animal - 1) * 2 + (int)move.Captured.Value.Owner + 1;
+        return (uint)(from | (to << 6) | (capturedId << 12));
+    }
+
+    internal static Move UnpackMove(uint packed)
+    {
+        int from = (int)(packed & 63);
+        int to = (int)((packed >> 6) & 63);
+        int capturedId = (int)((packed >> 12) & 63);
+        var fromPos = new Position(from % 7, from / 7);
+        var toPos = new Position(to % 7, to / 7);
+        Piece? captured = capturedId == 0
+            ? null
+            : new Piece(
+                (Animal)((((capturedId - 1) % SearchBoard.DistinctPieceKinds) >> 1) + 1),
+                (Player)(((capturedId - 1) % SearchBoard.DistinctPieceKinds) & 1),
+                toPos);
+        return new Move(fromPos, toPos, captured);
     }
 }
 
@@ -139,7 +173,7 @@ public class TranspositionTable
             else if (s < -(MateScore - MateRange))
                 s += ply;
 
-            switch (entry.Bound)
+            switch ((BoundType)entry.Bound)
             {
                 case BoundType.Exact:
                     score = s;
