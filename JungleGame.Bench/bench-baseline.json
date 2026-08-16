@@ -1,0 +1,30 @@
+{
+  "FormatVersion": 1,
+  "Positions": [
+    {
+      "Line": 5,
+      "Depth": 10,
+      "Nodes": 338874
+    },
+    {
+      "Line": 8,
+      "Depth": 10,
+      "Nodes": 161718
+    },
+    {
+      "Line": 12,
+      "Depth": 8,
+      "Nodes": 2667
+    },
+    {
+      "Line": 16,
+      "Depth": 8,
+      "Nodes": 103
+    },
+    {
+      "Line": 20,
+      "Depth": 8,
+      "Nodes": 1236
+    }
+  ]
+}

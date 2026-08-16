@@ -22,6 +22,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JungleGame.Core\JungleGame.Core.csproj" />
+    <ProjectReference Include="..\JungleGame.Bench\JungleGame.Bench.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Single source of truth for the tactical suite; Bench links the same file. -->
+    <EmbeddedResource Include="Resources\tactical.tsuite" />
   </ItemGroup>
 
 </Project>

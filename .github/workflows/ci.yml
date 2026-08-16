@@ -28,4 +28,14 @@ jobs:
 
       - name: Engine smoke test
         # Crash detector only — small budgets keep this step to a few minutes
-        run: dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 2 --timeA 1000 --timeB 300
+        # (--smoke turns an inconclusive gate into exit 0)
+        run: dotnet run --project JungleGame.Bench -c Release -- --arena --games 2 --timeA 1000 --timeB 300 --smoke
+
+      - name: Tactical suite
+        # 11 fixed-depth tactical positions; catches search/eval regressions fast
+        run: dotnet run --project JungleGame.Bench -c Release -- --testsuite
+
+      - name: Node-count regression gate
+        # Fixed-depth node counts vs Bench/bench-baseline.json (deterministic
+        # searches — machine-independent); fails on > 15% growth at equal depth
+        run: dotnet run --project JungleGame.Bench -c Release -- --bench --positions bench-positions.tsuite

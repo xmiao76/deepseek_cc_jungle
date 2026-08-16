@@ -12,4 +12,16 @@
     <ProjectReference Include="..\JungleGame.Core\JungleGame.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="JungleGame.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Node-regression bench data (baseline regenerated via the write-baseline flag). -->
+    <None Include="bench-positions.tsuite" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="bench-baseline.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Single source of truth for the tactical suite lives in the Tests project. -->
+    <None Include="..\JungleGame.Tests\Resources\tactical.tsuite" Link="tactical-suite.tsuite" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

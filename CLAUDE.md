@@ -37,6 +37,27 @@ dotnet test JungleGame.sln --filter "Category=Perf"
 # Engine benchmark: nodes, nodes/s, depth reached from the start position
 dotnet run --project JungleGame.Bench -c Release -- --bench --time 2000
 
+# Node-count regression gate: fixed-depth deterministic searches over
+# Bench/bench-positions.tsuite vs Bench/bench-baseline.json; fails on > 15%
+# growth at equal depth. Regenerate the baseline with --write-baseline when a
+# change intentionally shifts node counts (baseline is machine-independent).
+dotnet run --project JungleGame.Bench -c Release -- --bench --positions bench-positions.tsuite
+
+# Tactical suite: 11 fixed-depth positions with exact expected/forbidden moves
+# (transcribed from TacticsTests/MinimaxEngineTests; also run by CI and by the
+# xUnit TestSuiteTests over the embedded resource)
+dotnet run --project JungleGame.Bench -c Release -- --testsuite
+
+# Gated match protocol (arena): paired openings played with both colors, fresh
+# engine instances per game (uncorrelated TTs), Wilson 95% CI + exact binomial
+# p-value. Exit codes: 0 = pass (>= 55% of decisive with >= 24 decisive games),
+# 1 = fail, 2 = inconclusive (0 with --smoke). --openings-file takes one
+# opening per line ("c,r-c,r" plies); --openings-imbalanced N generates
+# decisive-rich openings (start position minus one random piece per side).
+dotnet run --project JungleGame.Bench -c Release -- --arena --games 120 --timeA 2000 --timeB 2000
+dotnet run --project JungleGame.Bench -c Release -- --arena --timeA 2000 --timeB 2000 --legacyB --openings-imbalanced 32
+dotnet run --project JungleGame.Bench -c Release -- --arena --games 2 --timeA 1000 --timeB 300 --smoke
+
 # Self-play tournament: engine A vs engine B (time budgets in ms).
 # --legacyB makes B use the pre-P3 evaluation; --legacySearchB makes B use the
 # pre-P4 search (LMR scaling, null-move, futility, delta pruning, lazy mobility,
@@ -138,11 +159,13 @@ MVVM-ish: `MainViewModel` owns game state; board rendering is code-behind Canvas
 - `.editorconfig` — style defaults + targeted analyzer suppressions, each with a justification comment (CA2007 WPF async, CA1416 platform noise, CA1822 for the instance-shaped Board API, CA1707/CA1711 for xUnit naming). Do not add suppressions without a comment.
 - `Directory.Build.props` — TreatWarningsAsErrors + `latest-recommended` analyzers for all projects; run the build immediately after touching this file and triage every warning (fix or suppress with justification).
 - `global.json` — pins SDK 8.0.x (`latestFeature` roll-forward).
-- `.github/workflows/ci.yml` — build → test with coverage → `scripts/check-coverage.ps1` gate (Core line rate ≥ 80%) → 4-game engine smoke self-play.
+- `.github/workflows/ci.yml` — build → test with coverage → `scripts/check-coverage.ps1` gate (Core line rate ≥ 80%; measured over Core classes only — the test project also references Bench for arena protocol tests) → 2-game arena smoke (`--smoke`) → tactical suite → node-count regression gate.
 
 ## Key design decisions
 
 - All Core public types are immutable (`readonly struct` or immutable collections). `GameController.ApplyMove` returns a new `GameState`; it never mutates the input. The engine's mutable `SearchBoard` is internal and converted once at search entry; results come back as public `Move`s
+- `Position`/`Piece` hash codes are stable arithmetic (no `HashCode.Combine`): .NET's per-process randomized hashing made `ImmutableDictionary` iteration order — and therefore root move ordering and seeded random-play positions — vary between runs. Cross-run determinism is required for the node-count baseline and reproducible A/B gates
+- `GameState.CreateFromPieces(pieces, turn)` builds arbitrary in-progress states (arena imbalanced openings, test-suite positions): validates board bounds, distinct squares, no den occupants, ≤ 8 pieces per side (duplicate ranks allowed — SearchBoard supports them for constructed positions), both sides present; seeds History with the position hash
 - Lion jumps both horizontally (row-changing, across the 3-tall river) and vertically (column-changing, across the 2-wide river); Tiger jumps only vertically (column-changing)
 - Rat-in-water cannot be captured by any land piece except another Rat; Rat can capture Rat in water; Rat cannot capture Elephant from water
 - A piece on an opponent's trap has effective rank 0 for capture resolution (attacker and defender both)

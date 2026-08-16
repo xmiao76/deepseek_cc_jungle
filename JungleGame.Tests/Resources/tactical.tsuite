@@ -1,0 +1,46 @@
+# Tactical strength regression suite.
+# Transcribed from TacticsTests.cs and MinimaxEngineTests.cs (the exact-move
+# assertions). Piece owner convention: capital = Blue, lowercase = Red.
+# Each E/F line asserts the best move of a fixed-depth search (D = depth).
+# The xUnit runner (TestSuiteTests) and Bench --testsuite both execute this file.
+
+# Fork: Lion steps forward, forking Wolf and Dog (win-in-3 material).
+P Blue 3,1:Lion 0,0:Cat 2,2:wolf 4,2:dog 6,8:rat
+E 3,1-3,2 D3
+
+# Den defense: capture the trapped Wolf (rank 0) one step from Blue's den.
+P Blue 3,2:Cat 0,0:Lion 3,1:wolf 6,8:rat
+E 3,2-3,1 D2
+
+# Anti-blunder: Elephant must not step next to the enemy Rat.
+P Blue 3,4:Elephant 0,0:Cat 3,2:rat 6,8:wolf
+F 3,4-3,3 D2
+
+# Anti-blunder: both reachable Red trap squares are guarded; refuse them.
+P Blue 2,7:Wolf 0,0:Lion 1,8:cat 3,6:rat 6,8:rat
+F 2,7-2,8 D2
+F 2,7-3,7 D2
+
+# Mate in 2: capture the Dog on the trap square, then enter the den.
+P Blue 3,6:Wolf 0,0:Cat 3,7:dog 0,8:rat
+E 3,6-3,7 D2
+
+# Mate in 1: Lion enters the undefended den.
+P Blue 3,7:Lion 0,0:rat
+E 3,7-3,8 D1
+
+# Anti-blunder: Elephant must not walk onto Red's trap (guarded by Cat).
+P Blue 2,7:Elephant 4,7:Wolf 0,0:Rat 1,8:cat 0,5:dog
+F 2,7-2,8 D4
+
+# Single legal move: the boxed-in Wolf can only step forward.
+P Blue 3,3:Wolf 3,2:elephant 0,8:rat
+E 3,3-3,4 D1
+
+# Qsearch capture: strong-takes-weak Wolf x Dog with no recapture.
+P Blue 3,2:Wolf 0,0:Lion 3,4:dog 3,5:rat 0,1:cat 6,8:rat
+E 3,2-3,3 D2
+
+# Mate in 2 via horizon den entry: trap-square step, then den (not the Dog capture).
+P Blue 3,6:Wolf 0,0:Cat 2,6:dog 0,8:rat
+E 3,6-3,7 D2

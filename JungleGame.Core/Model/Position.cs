@@ -15,7 +15,11 @@ public readonly struct Position : IEquatable<Position>
 
     public bool Equals(Position other) => Col == other.Col && Row == other.Row;
     public override bool Equals(object? obj) => obj is Position other && Equals(other);
-    public override int GetHashCode() => HashCode.Combine(Col, Row);
+    // Stable hash (no HashCode.Combine): randomized hashing would make
+    // ImmutableDictionary iteration order — and therefore move generation
+    // order, root move ordering, and seeded random-play positions — vary
+    // between processes. Bijective over the 7×9 board.
+    public override int GetHashCode() => Col * 9 + Row;
     public static bool operator ==(Position a, Position b) => a.Equals(b);
     public static bool operator !=(Position a, Position b) => !a.Equals(b);
     public override string ToString() => $"({Col},{Row})";
