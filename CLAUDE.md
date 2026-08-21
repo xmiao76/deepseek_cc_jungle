@@ -28,7 +28,11 @@ dotnet test JungleGame.sln --filter "FullyQualifiedName~Lion_CanJumpVertically_A
 # Run tests with coverage (report lands in JungleGame.Tests/TestResults/*/coverage.cobertura.xml)
 dotnet test JungleGame.sln --collect:"XPlat Code Coverage"
 
-# Coverage gate (also run by CI; Core line coverage must stay >= 80% — currently ~98.6%)
+# Coverage gate (also run by CI; Core line coverage must stay >= 80% — currently ~84%).
+# IMPORTANT: the perf canaries must NOT run inside the instrumented invocation —
+# coverlet slows the search hot loop ~25x, which fails the wall-clock node
+# floors by design. CI splits them into a separate un-instrumented step; run
+# them clean locally too.
 powershell -File scripts/check-coverage.ps1
 
 # Run the opt-in performance gates (also run by default, serialized)
@@ -94,6 +98,10 @@ dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 40 --time
 # - bench 2s from start: depth 11 at ~870k nps (pre-session); depth 11 at ~680k
 #   nps with the P4 search features — same depth for fewer nodes (the pruning
 #   spends the budget on the deeper parts of the tree)
+# - 2026-08-21 local baseline (strength-v1.3, SDK 8.0.419): bench from start =
+#   depth 11 @ 600ms/660k nps (1s budget), depth 12 @ 813ms/876k nps (2s
+#   budget). P0 gates: 197/197 tests, coverage gate 83.8% (Core line rate),
+#   node-count regression gate passed, 11/11 tactical suite, arena smoke exit 0.
 
 # Eval tuning harness (offline): generate self-play data (fixed-depth games,
 # --depthB asymmetry makes labels decisive-rich), then fit the linear eval

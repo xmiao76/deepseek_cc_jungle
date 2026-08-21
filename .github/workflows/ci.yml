@@ -21,7 +21,13 @@ jobs:
         run: dotnet build JungleGame.sln -c Release
 
       - name: Test with coverage
-        run: dotnet test JungleGame.Tests -c Release --collect:"XPlat Code Coverage"
+        # The perf canaries are wall-clock node floors; code-coverage
+        # instrumentation slows the search loop ~25x, so they must not run
+        # inside the instrumented invocation (see the un-instrumented step).
+        run: dotnet test JungleGame.Tests -c Release --filter "Category!=Perf" --collect:"XPlat Code Coverage"
+
+      - name: Performance gates (un-instrumented)
+        run: dotnet test JungleGame.Tests -c Release --filter "Category=Perf"
 
       - name: Check coverage gate
         run: powershell -File scripts/check-coverage.ps1
