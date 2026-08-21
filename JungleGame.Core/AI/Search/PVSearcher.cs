@@ -115,6 +115,11 @@ internal sealed class PVSearcher
         {
             bestMoveForOrdering = tbRootMove.Value;
         }
+        else if (_options.UseBook && OpeningBook.TryGetMove(root.Hash, out Move bookMove))
+        {
+            // Opening book: only seeds the ordering — the search keeps control.
+            bestMoveForOrdering = bookMove;
+        }
 
         int bestScore = int.MinValue;
         int stableDepthCount = 0; // consecutive iterations with the same best move

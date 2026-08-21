@@ -55,6 +55,8 @@ switch (args[0])
         return TuneRunner.RunGenData(args);
     case "--tune":
         return TuneRunner.RunTune(args);
+    case "--gen-book":
+        return BookGenerator.Run(args);
     default:
         PrintUsage();
         return 1;
@@ -197,4 +199,6 @@ static void PrintUsage()
     Console.WriteLine("  JungleGame.Bench --gen-data [--games <n>] [--depth <n>] [--depthB <n>]");
     Console.WriteLine("                     [--parallel <n>] [--out <file>]");
     Console.WriteLine("  JungleGame.Bench --tune [--data <file>] [--epochs <n>] [--lr <x>] [--out <file>]");
+    Console.WriteLine("  JungleGame.Bench --gen-book [--games <n>] [--time <ms>] [--ply-limit <n>]");
+    Console.WriteLine("                     [--seed <n>] [--out <file>] [--openings-out <file>]");
 }

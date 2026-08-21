@@ -25,6 +25,8 @@ public class MinimaxEngine
     /// <param name="maxNodes">Optional fixed-node budget for deterministic tests.</param>
     /// <param name="legacyEvalWeights">Uses the frozen pre-tuning weight vector instead of
     /// the current (tuned) one — the eval-weight A/B gate. Keeps the same feature set.</param>
+    /// <param name="useBook">Seeds root move ordering from the opening book (a file must be
+    /// present; absent or corrupt book files degrade silently to search-only play).</param>
     public MinimaxEngine(
         TimeSpan? timeLimit = null,
         int? maxDepth = null,
@@ -33,7 +35,8 @@ public class MinimaxEngine
         bool useTablebase = true,
         int contempt = 30,
         long? maxNodes = null,
-        bool legacyEvalWeights = false)
+        bool legacyEvalWeights = false,
+        bool useBook = false)
     {
         _tt = new TranspositionTable(1 << 20);
         _time = new TimeManager(timeLimit ?? TimeSpan.FromSeconds(4));
@@ -46,9 +49,11 @@ public class MinimaxEngine
             new SearchContext(),
             new SearchOptions(
                 legacyEval, legacySearch, useTablebase, contempt,
-                legacyEvalWeights ? EvalParameters.Legacy : null),
+                legacyEvalWeights ? EvalParameters.Legacy : null, useBook),
             maxDepth);
         TablebaseProbe.Initialize(); // idempotent: loads the table once if present
+        if (useBook)
+            OpeningBook.Initialize(); // idempotent: loads the book once if present
     }
 
     public long NodesSearched => _searcher.Nodes;
