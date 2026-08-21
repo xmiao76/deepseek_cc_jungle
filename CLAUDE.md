@@ -110,10 +110,21 @@ dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 40 --time
 # - bench 2s from start: depth 11 at ~870k nps (pre-session); depth 11 at ~680k
 #   nps with the P4 search features — same depth for fewer nodes (the pruning
 #   spends the budget on the deeper parts of the tree)
+# - Lazy SMP (threaded search): deferred at the design checkpoint. The TT entry
+#   is a 24-byte non-atomic struct — Store/Probe under concurrency would tear
+#   without an entry repack (CAS-sized, e.g. two ulongs) plus per-thread
+#   SearchContext/PVSearcher. Expected gain at the 2s spec budget is roughly one
+#   depth (12 → 13) on multi-core desktops. Revisit after the 16-byte entry
+#   repack; until then the search is single-threaded by design.
 # - 2026-08-21 local baseline (strength-v1.3, SDK 8.0.419): bench from start =
 #   depth 11 @ 600ms/660k nps (1s budget), depth 12 @ 813ms/876k nps (2s
 #   budget). P0 gates: 197/197 tests, coverage gate 83.8% (Core line rate),
 #   node-count regression gate passed, 11/11 tactical suite, arena smoke exit 0.
+# - P2b sanity on the first tuned-eval candidate (20k-game fit, weights-20k.json):
+#   REJECTED — MobilityWeight -9.54 (inverts "more moves is better") and
+#   DoomedPieceWeightPerRank -30.16 (trapped-enemy position swings -9 → -374).
+#   Do not adopt; retune via --gen-data/--tune (the tuner now detects these
+#   two sign inversions at fit time).
 
 # Eval tuning harness (offline): generate self-play data (fixed-depth games,
 # --depthB asymmetry makes labels decisive-rich), then fit the linear eval
