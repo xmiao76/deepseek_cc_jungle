@@ -25,6 +25,7 @@ internal static class ArenaRunner
         bool legacySearchB = args.Contains("--legacySearchB");
         bool noTablebaseA = args.Contains("--noTablebaseA");
         bool noTablebaseB = args.Contains("--noTablebaseB");
+        bool legacyEvalB = args.Contains("--legacyEvalB");
         int seed = Args.ReadInt(args, "--seed", 42);
         int games = Args.ReadInt(args, "--games", 120);
         string? openingsFile = Args.ReadString(args, "--openings-file");
@@ -43,6 +44,7 @@ internal static class ArenaRunner
             $"(A {timeA} ms, B {timeB} ms{(legacyB ? ", B legacy eval" : "")}" +
             $"{(legacySearchA ? ", A legacy search" : "")}{(legacySearchB ? ", B legacy search" : "")}" +
             $"{(noTablebaseA ? ", A tablebase off" : "")}{(noTablebaseB ? ", B tablebase off" : "")}" +
+            $"{(legacyEvalB ? ", B legacy eval weights" : "")}" +
             $", contempt A={contemptA} B={contemptB})");
         Console.WriteLine($"Openings: {source} (seed {seed})");
         Console.WriteLine();
@@ -56,7 +58,7 @@ internal static class ArenaRunner
                 bool aIsBlue = color == 0;
                 var (wA, wB, d, moves, status) = PlayGame(
                     opening, aIsBlue, timeA, timeB, legacyB, legacySearchA, legacySearchB,
-                    noTablebaseA, noTablebaseB, contemptA, contemptB);
+                    noTablebaseA, noTablebaseB, legacyEvalB, contemptA, contemptB);
 
                 winsA += wA;
                 winsB += wB;
@@ -89,7 +91,7 @@ internal static class ArenaRunner
     private static (int WinsA, int WinsB, int Draws, int Moves, GameStatus Status) PlayGame(
         GameState opening, bool aIsBlue, int timeA, int timeB,
         bool legacyB, bool legacySearchA, bool legacySearchB,
-        bool noTablebaseA, bool noTablebaseB, int contemptA, int contemptB)
+        bool noTablebaseA, bool noTablebaseB, bool legacyEvalB, int contemptA, int contemptB)
     {
         // Fresh engines per game: uncorrelated results (the shared-TT protocol of
         // the legacy --selfplay mode biases later games).
@@ -100,7 +102,7 @@ internal static class ArenaRunner
             useTablebase: !noTablebaseA, contempt: contemptA);
         var engineB = new MinimaxEngine(
             TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB,
-            useTablebase: !noTablebaseB, contempt: contemptB);
+            useTablebase: !noTablebaseB, contempt: contemptB, legacyEvalWeights: legacyEvalB);
 
         var state = opening;
         int moves = 0;

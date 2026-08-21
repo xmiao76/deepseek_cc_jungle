@@ -27,6 +27,12 @@ internal sealed class PVSearcher
     private readonly MoveOrdering _ordering;
     private readonly SearchContext _context;
     private readonly SearchOptions _options;
+
+    /// <summary>
+    /// The weight vector for this engine: the explicit one (legacyEvalWeights
+    /// A/B gate) or the process-wide one the tuning harness may have installed.
+    /// </summary>
+    private EvalParameters EvalWeights => _options.EvalWeights ?? EvaluationFunction.Current;
     private readonly int _maxDepth;
 
     internal PVSearcher(
@@ -310,7 +316,7 @@ internal sealed class PVSearcher
             && board.PieceCount(0) + board.PieceCount(1) > 8;
         int staticEval = 0;
         if (futilityApplicable)
-            staticEval = EvaluationFunction.EvaluateStatic(board, side, _options.LegacyEval);
+            staticEval = EvaluationFunction.EvaluateStatic(board, side, EvalWeights, _options.LegacyEval);
 
         // Push the position onto the repetition path (skip if the stack is full)
         bool pathPushed = _context.CanPush;
@@ -466,15 +472,15 @@ internal sealed class PVSearcher
         // mobility-free value is checked first; the full evaluation only runs
         // when that value falls inside the window.
         int standPat = _options.LegacySearch
-            ? EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), _options.LegacyEval)
-            : EvaluationFunction.EvaluateStatic(board, side, _options.LegacyEval);
+            ? EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), EvalWeights, _options.LegacyEval)
+            : EvaluationFunction.EvaluateStatic(board, side, EvalWeights, _options.LegacyEval);
 
         if (standPat >= beta)
             return beta;
 
         if (!_options.LegacySearch && standPat > alpha)
         {
-            standPat = EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), _options.LegacyEval);
+            standPat = EvaluationFunction.Evaluate(board, side, board.CountLegalMoves(side), board.CountLegalMoves(side ^ 1), EvalWeights, _options.LegacyEval);
             if (standPat >= beta)
                 return beta;
         }
@@ -545,7 +551,7 @@ internal sealed class PVSearcher
     {
         if (_options.Contempt == 0)
             return 0;
-        int staticEval = EvaluationFunction.EvaluateStatic(board, board.Turn, _options.LegacyEval);
+        int staticEval = EvaluationFunction.EvaluateStatic(board, board.Turn, EvalWeights, _options.LegacyEval);
         return staticEval >= 0 ? -_options.Contempt : _options.Contempt;
     }
 

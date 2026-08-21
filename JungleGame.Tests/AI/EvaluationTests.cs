@@ -161,4 +161,34 @@ public class EvaluationTests
 
         Assert.Equal(legacy + 40, v2);
     }
+
+    [Fact]
+    public void LegacyVector_IsFrozenToTheHandTunedConstants()
+    {
+        // EvalParameters.Legacy pins the pre-tuning hand-tuned constants; once the
+        // tuning harness adopts a fitted vector into Default, this test guards the
+        // freeze (the legacyEvalWeights A/B gate needs the original numbers).
+        var legacy = EvalParameters.Legacy;
+        Assert.Equal(100, legacy.MaterialWeight);
+        Assert.Equal(1, legacy.ForwardWeight);
+        Assert.Equal(12, legacy.DenOffenseWeight);
+        Assert.Equal(8, legacy.DenGuardWeight);
+        Assert.Equal(80, legacy.TrapPenalty);
+        Assert.Equal(5, legacy.DoomedPieceWeightPerRank);
+        Assert.Equal(30, legacy.DenEscortBonus);
+        Assert.Equal(15, legacy.RiverBankBonus);
+        Assert.Equal(10, legacy.JumpPathBonus);
+        Assert.Equal(8, legacy.RatNearWaterBonus);
+        Assert.Equal(12, legacy.RatInWaterBonus);
+        Assert.Equal(15, legacy.ElephantRatFearWeight);
+        Assert.Equal(15, legacy.ThreatStrongerWeight);
+        Assert.Equal(8, legacy.ThreatEqualWeight);
+        Assert.Equal(25, legacy.RatThreatensElephantPenalty);
+        Assert.Equal(3, legacy.MobilityWeight);
+        Assert.Equal(40, legacy.DenThreatWeight);
+        Assert.Equal(200, legacy.EndgameDenThreatPenalty);
+        Assert.Equal(25, legacy.EndgameAdvanceWeight);
+        Assert.Equal(5, legacy.BackRankPenalty);
+        Assert.Equal(0, legacy.RatNearOppDenWeight);
+    }
 }

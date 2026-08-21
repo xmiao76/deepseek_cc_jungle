@@ -27,8 +27,14 @@ public static class EvaluationFunction
     /// </summary>
     internal static void SetParameters(EvalParameters parameters) => _current = parameters;
 
+    /// <summary>The process-wide weight vector (used when an engine has no explicit weights).</summary>
+    internal static EvalParameters Current => _current;
+
     internal static int Evaluate(SearchBoard board, int side, int myMobility, int oppMobility, bool legacyEval = false)
         => EvaluateStatic(board, side, legacyEval) + (myMobility - oppMobility) * _current.MobilityWeight;
+
+    internal static int Evaluate(SearchBoard board, int side, int myMobility, int oppMobility, EvalParameters weights, bool legacyEval = false)
+        => EvaluateStatic(board, side, weights, legacyEval) + (myMobility - oppMobility) * weights.MobilityWeight;
 
     /// <summary>
     /// Everything <see cref="Evaluate"/> computes except the mobility term, which
@@ -36,10 +42,10 @@ public static class EvaluationFunction
     /// and for lazy mobility in the quiescence stand-pat.
     /// </summary>
     internal static int EvaluateStatic(SearchBoard board, int side, bool legacyEval = false)
-    {
-        var features = EvalFeatureExtractor.ExtractStatic(board, side, legacyEval);
-        return _current.Dot(features);
-    }
+        => _current.Dot(EvalFeatureExtractor.ExtractStatic(board, side, legacyEval));
+
+    internal static int EvaluateStatic(SearchBoard board, int side, EvalParameters weights, bool legacyEval = false)
+        => weights.Dot(EvalFeatureExtractor.ExtractStatic(board, side, legacyEval));
 
     /// <summary>
     /// Public evaluation of a game state (delegates to the fast internal path).

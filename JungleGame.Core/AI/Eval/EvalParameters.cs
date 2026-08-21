@@ -36,7 +36,34 @@ internal sealed class EvalParameters
     internal int RatNearOppDenWeight;                  // per Rat within 2 of the opponent's den (candidate, starts 0)
 
     internal static EvalParameters Default { get; } = new();
-    internal static EvalParameters Legacy { get; } = new();
+    internal static EvalParameters Legacy { get; } = new()
+    {
+        // Frozen snapshot of the pre-tuning hand-tuned constants (May–Aug 2026),
+        // NOT a copy of this class's initializers: those change when the tuning
+        // harness adopts a fitted vector into Default, and Legacy must keep the
+        // original hand-tuned values for the legacyEvalWeights A/B gate.
+        MaterialWeight = 100,
+        ForwardWeight = 1,
+        DenOffenseWeight = 12,
+        DenGuardWeight = 8,
+        TrapPenalty = 80,
+        DoomedPieceWeightPerRank = 5,
+        DenEscortBonus = 30,
+        RiverBankBonus = 15,
+        JumpPathBonus = 10,
+        RatNearWaterBonus = 8,
+        RatInWaterBonus = 12,
+        ElephantRatFearWeight = 15,
+        ThreatStrongerWeight = 15,
+        ThreatEqualWeight = 8,
+        RatThreatensElephantPenalty = 25,
+        MobilityWeight = 3,
+        DenThreatWeight = 40,
+        EndgameDenThreatPenalty = 200,
+        EndgameAdvanceWeight = 25,
+        BackRankPenalty = 5,
+        RatNearOppDenWeight = 0,
+    };
 
     internal const int WeightCount = 21; // matches ToVector/FromVector
 

@@ -23,6 +23,8 @@ public class MinimaxEngine
     /// suite pins pure-search behavior and disables it).</param>
     /// <param name="contempt">Draw-avoidance bias in centipawns (default 30; 0 = off).</param>
     /// <param name="maxNodes">Optional fixed-node budget for deterministic tests.</param>
+    /// <param name="legacyEvalWeights">Uses the frozen pre-tuning weight vector instead of
+    /// the current (tuned) one — the eval-weight A/B gate. Keeps the same feature set.</param>
     public MinimaxEngine(
         TimeSpan? timeLimit = null,
         int? maxDepth = null,
@@ -30,7 +32,8 @@ public class MinimaxEngine
         bool legacySearch = false,
         bool useTablebase = true,
         int contempt = 30,
-        long? maxNodes = null)
+        long? maxNodes = null,
+        bool legacyEvalWeights = false)
     {
         _tt = new TranspositionTable(1 << 20);
         _time = new TimeManager(timeLimit ?? TimeSpan.FromSeconds(4));
@@ -41,7 +44,9 @@ public class MinimaxEngine
             _time,
             new MoveOrdering(useSee: !legacySearch),
             new SearchContext(),
-            new SearchOptions(legacyEval, legacySearch, useTablebase, contempt),
+            new SearchOptions(
+                legacyEval, legacySearch, useTablebase, contempt,
+                legacyEvalWeights ? EvalParameters.Legacy : null),
             maxDepth);
         TablebaseProbe.Initialize(); // idempotent: loads the table once if present
     }
