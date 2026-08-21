@@ -60,6 +60,9 @@ Notes
   and river play. It typically reaches 12 plies in 2 seconds.
 - While the AI is thinking, the status line shows the live search progress
   (depth, nodes per second, and tablebase hits).
+- The AI ponders during your think time: after its own move it searches the
+  expected reply position, so a matching reply is answered instantly and the
+  search that does run is warmed by the same transposition table.
 - The difficulty setting only changes the per-move time budget; the engine
   keeps its search memory across games.
 - Game saves are not supported in this version.
@@ -73,7 +76,7 @@ Endgame Tablebase (optional)
 
 Build Info
 ----------
-- Version: 1.2.0
+- Version: 1.3.0
 - Built with .NET 8.0 (self-contained, win-x64, single file)
 - Code agent: Claude Code (Anthropic CLI)
 - AI model: DeepSeek V4 Pro (1M context window)
