@@ -290,6 +290,33 @@ public class TablebaseTests : IDisposable
         Assert.Equal(new Position(3, 8), move.Value.To);
     }
 
+    [Fact]
+    public void Engine_UseTablebaseFalse_ProbesNothing()
+    {
+        // The engine ctor's TablebaseProbe.Initialize() may load the disk file
+        // over the test tables when one is present; re-apply the in-memory
+        // tables after construction so the probes run against the same data.
+        var (wdl2, wdl3, dtm2, dtm3) = Built.Value;
+        var on = new MinimaxEngine(TimeSpan.FromSeconds(1), maxDepth: 4, useTablebase: true);
+        var off = new MinimaxEngine(TimeSpan.FromSeconds(1), maxDepth: 4, useTablebase: false);
+        TablebaseProbe.LoadForTesting(wdl2, wdl3, dtm2, dtm3);
+
+        var state = GameState.CreateFromPieces(new[]
+        {
+            new Piece(Animal.Lion, Player.Blue, new Position(3, 7)),
+            new Piece(Animal.Rat, Player.Red, new Position(0, 0)),
+        }, Player.Blue);
+
+        long before = TablebaseInfo.TotalHits;
+        on.FindBestMove(state);
+        long afterOn = TablebaseInfo.TotalHits;
+        off.FindBestMove(state);
+        long afterOff = TablebaseInfo.TotalHits;
+
+        Assert.True(afterOn > before, "tablebase-enabled search performed no probes");
+        Assert.Equal(afterOn, afterOff);
+    }
+
     private static (SearchBoard Board, GameState State) Random2PieceBoard(Random rng, Animal a, Animal b)
     {
         int stm = rng.Next(2);

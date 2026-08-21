@@ -189,6 +189,7 @@ static void PrintUsage()
     Console.WriteLine("                     [--legacyB] [--legacySearchB] [--seed <n>] [--openings <n>]");
     Console.WriteLine("  JungleGame.Bench --arena [--games <n>] [--timeA <ms>] [--timeB <ms>] [--legacyB]");
     Console.WriteLine("                     [--legacySearchA] [--legacySearchB] [--seed <n>] [--smoke]");
+    Console.WriteLine("                     [--noTablebaseA|--noTablebaseB]");
     Console.WriteLine("                     [--openings-file <path>] [--openings-imbalanced <n>]");
     Console.WriteLine("  JungleGame.Bench --testsuite [--file <path.tsuite>]");
     Console.WriteLine("  JungleGame.Bench --tb-build [--path <dir>]");

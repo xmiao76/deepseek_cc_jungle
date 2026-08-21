@@ -23,6 +23,8 @@ internal static class ArenaRunner
         bool legacyB = args.Contains("--legacyB");
         bool legacySearchA = args.Contains("--legacySearchA");
         bool legacySearchB = args.Contains("--legacySearchB");
+        bool noTablebaseA = args.Contains("--noTablebaseA");
+        bool noTablebaseB = args.Contains("--noTablebaseB");
         int seed = Args.ReadInt(args, "--seed", 42);
         int games = Args.ReadInt(args, "--games", 120);
         string? openingsFile = Args.ReadString(args, "--openings-file");
@@ -40,6 +42,7 @@ internal static class ArenaRunner
         Console.WriteLine($"Arena: {pairs * 2} games = {pairs} openings × 2 colors " +
             $"(A {timeA} ms, B {timeB} ms{(legacyB ? ", B legacy eval" : "")}" +
             $"{(legacySearchA ? ", A legacy search" : "")}{(legacySearchB ? ", B legacy search" : "")}" +
+            $"{(noTablebaseA ? ", A tablebase off" : "")}{(noTablebaseB ? ", B tablebase off" : "")}" +
             $", contempt A={contemptA} B={contemptB})");
         Console.WriteLine($"Openings: {source} (seed {seed})");
         Console.WriteLine();
@@ -52,7 +55,8 @@ internal static class ArenaRunner
             {
                 bool aIsBlue = color == 0;
                 var (wA, wB, d, moves, status) = PlayGame(
-                    opening, aIsBlue, timeA, timeB, legacyB, legacySearchA, legacySearchB, contemptA, contemptB);
+                    opening, aIsBlue, timeA, timeB, legacyB, legacySearchA, legacySearchB,
+                    noTablebaseA, noTablebaseB, contemptA, contemptB);
 
                 winsA += wA;
                 winsB += wB;
@@ -84,12 +88,19 @@ internal static class ArenaRunner
 
     private static (int WinsA, int WinsB, int Draws, int Moves, GameStatus Status) PlayGame(
         GameState opening, bool aIsBlue, int timeA, int timeB,
-        bool legacyB, bool legacySearchA, bool legacySearchB, int contemptA, int contemptB)
+        bool legacyB, bool legacySearchA, bool legacySearchB,
+        bool noTablebaseA, bool noTablebaseB, int contemptA, int contemptB)
     {
         // Fresh engines per game: uncorrelated results (the shared-TT protocol of
         // the legacy --selfplay mode biases later games).
-        var engineA = new MinimaxEngine(TimeSpan.FromMilliseconds(timeA), legacySearch: legacySearchA, contempt: contemptA);
-        var engineB = new MinimaxEngine(TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB, contempt: contemptB);
+        // NOTE: --legacySearchB also disables tablebase probing, so an isolated
+        // tablebase A/B needs --noTablebaseA/--noTablebaseB instead.
+        var engineA = new MinimaxEngine(
+            TimeSpan.FromMilliseconds(timeA), legacySearch: legacySearchA,
+            useTablebase: !noTablebaseA, contempt: contemptA);
+        var engineB = new MinimaxEngine(
+            TimeSpan.FromMilliseconds(timeB), legacyEval: legacyB, legacySearch: legacySearchB,
+            useTablebase: !noTablebaseB, contempt: contemptB);
 
         var state = opening;
         int moves = 0;
