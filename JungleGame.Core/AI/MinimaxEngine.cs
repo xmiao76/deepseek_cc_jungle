@@ -54,6 +54,13 @@ public class MinimaxEngine
     public long NodesSearched => _searcher.Nodes;
     public int LastCompletedDepth => _searcher.LastCompletedDepth;
 
+    /// <summary>
+    /// The opponent reply the engine expects after its own best move (from the
+    /// last completed search iteration) — the pondering prediction. Null when
+    /// unavailable. Valid after FindBestMove returns a move.
+    /// </summary>
+    public Move? LastPredictedReply => _searcher.LastPredictedReply;
+
     /// <summary>Search statistics snapshot for the UI (updated per completed depth).</summary>
     public EngineStats Stats => _searcher.Stats;
 
@@ -77,6 +84,25 @@ public class MinimaxEngine
         {
             _tt.NewGeneration(); // Entries older than the previous search are ignored
             return _searcher.SearchBestMove(state, token);
+        }
+    }
+
+    /// <summary>
+    /// Background pondering: searches the given position (the position after the
+    /// engine's own move and the predicted opponent reply) so the reply move is
+    /// ready before the search can be skipped entirely. The transposition table
+    /// is shared: the pondered entries are one generation old once the real
+    /// search starts, which is inside the accepted probe window — a wrong
+    /// prediction still pays off as warm-TT depth. Searches are serialized with
+    /// <see cref="FindBestMove"/> by the engine lock, so the caller must cancel
+    /// the pondering token before asking for a real move.
+    /// </summary>
+    public Move? Ponder(GameState position, CancellationToken token = default)
+    {
+        lock (_searchGate)
+        {
+            _tt.NewGeneration();
+            return _searcher.SearchBestMove(position, token);
         }
     }
 }

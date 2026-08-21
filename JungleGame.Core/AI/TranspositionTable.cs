@@ -145,6 +145,23 @@ public class TranspositionTable
             _table[baseIdx + shallowest] = new TTEntry(hash, _generation, depth, score, bestMove, bound);
     }
 
+    /// <summary>
+    /// The stored best move for a fresh (current or previous generation) entry
+    /// matching the hash, without bound semantics — used to extract the engine's
+    /// predicted reply for pondering. Null when nothing usable is stored.
+    /// </summary>
+    internal Move? GetBestMove(ulong hash)
+    {
+        int baseIdx = (int)(hash % (ulong)_slotCount) * BucketCount;
+        for (int i = 0; i < BucketCount; i++)
+        {
+            var entry = _table[baseIdx + i];
+            if (entry.Hash == hash && IsFresh(entry.Generation, _generation))
+                return entry.BestMove;
+        }
+        return null;
+    }
+
     public bool TryProbe(ulong hash, int depth, int alpha, int beta, int ply, out int score, out Move bestMove)
     {
         int baseIdx = (int)(hash % (ulong)_slotCount) * BucketCount;

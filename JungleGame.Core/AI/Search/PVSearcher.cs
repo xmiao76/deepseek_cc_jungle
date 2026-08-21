@@ -55,6 +55,12 @@ internal sealed class PVSearcher
     internal long Nodes { get; private set; }
     internal int LastCompletedDepth { get; private set; }
 
+    /// <summary>
+    /// The engine's predicted opponent reply after its own best move (from the
+    /// last completed iteration) — the pondering hook. Null when unavailable.
+    /// </summary>
+    internal Move? LastPredictedReply { get; private set; }
+
     private EngineStats _stats;
     private long _statsTicks;
 
@@ -80,6 +86,7 @@ internal sealed class PVSearcher
         _time.Reset();
         Nodes = 0;
         LastCompletedDepth = 0;
+        LastPredictedReply = null;
         var sw = Stopwatch.StartNew();
 
         var root = SearchBoard.FromGameState(state);
@@ -201,6 +208,10 @@ internal sealed class PVSearcher
                 bestMove = currentBestMove;
                 bestMoveForOrdering = ToPublicMove(currentBestMove);
                 LastCompletedDepth = depth;
+                // The engine's expected opponent reply after its own move — the
+                // pondering hook for the UI (null until a completed depth yields
+                // a usable TT successor).
+                LastPredictedReply = PredictReply(root, currentBestMove);
                 _ordering.AgeHistoryTable();
 
                 stableDepthCount = currentBestMove.From == prevBestMove.From && currentBestMove.To == prevBestMove.To
@@ -566,6 +577,41 @@ internal sealed class PVSearcher
         if (score < -MateThreshold)
             return Math.Max(score - ply, -TranspositionTable.MateScore);
         return score;
+    }
+
+    /// <summary>
+    /// The engine's expected opponent reply after its own move: the TT best move
+    /// of the child position. Verified legal via the public generator (the entry
+    /// could in principle be stale enough to disagree with the final tree);
+    /// null when the child has no usable entry or the game is over.
+    /// </summary>
+    private Move? PredictReply(SearchBoard root, SearchMove myMove)
+    {
+        var child = _context.GetBoard();
+        root.CopyTo(child);
+        child.ApplyMove(myMove);
+        Move? reply = null;
+        if (child.WinnerSide == SearchBoard.NoWinner)
+        {
+            var ttMove = _tt.GetBestMove(child.Hash);
+            if (ttMove.HasValue)
+            {
+                Span<SearchMove> legal = stackalloc SearchMove[SearchBoard.MaxMovesPerPly];
+                int n = child.GenerateMoves(child.Turn, legal);
+                int from = ttMove.Value.From.Row * 7 + ttMove.Value.From.Col;
+                int to = ttMove.Value.To.Row * 7 + ttMove.Value.To.Col;
+                for (int i = 0; i < n; i++)
+                {
+                    if (legal[i].From == from && legal[i].To == to)
+                    {
+                        reply = ttMove;
+                        break;
+                    }
+                }
+            }
+        }
+        _context.ReleaseBoard(child);
+        return reply;
     }
 
     private static Move ToPublicMove(in SearchMove move)

@@ -18,6 +18,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _humanFirst = true;
     private bool _aiThinking;
     private CancellationTokenSource? _aiCts;
+    private CancellationTokenSource? _ponderCts;
+    private Move? _ponderPrediction; // the engine's predicted human reply (logical coords)
+    private Move? _ponderedMove;     // the engine's reply if the prediction held
     private readonly List<string> _moveHistory = new();
     private readonly System.Windows.Threading.DispatcherTimer _statsTimer;
 
@@ -122,6 +125,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public void StartNewGame()
     {
         _aiCts?.Cancel();
+        CancelPonder();
         _state = GameState.CreateInitial();
         SelectedPosition = null;
         LegalMoves = new HashSet<Position>();
@@ -224,26 +228,41 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (!_isHumanTurn)
         {
-            _ = DoAIMove();
+            // Pondering: if the human just played the predicted reply, the engine
+            // already has the reply computed — skip the search entirely.
+            var prediction = _ponderPrediction;
+            Move? premove = null;
+            if (prediction != null && prediction.Value.From == from && prediction.Value.To == to && _ponderedMove != null)
+            {
+                // The pondered move is legal in this exact position (the human
+                // matched the prediction, so the state is what was searched).
+                premove = _ponderedMove;
+            }
+            _ = DoAIMove(premove);
         }
     }
 
-    private async Task DoAIMove()
+    private async Task DoAIMove(Move? premove = null)
     {
+        CancelPonder();
         _aiCts?.Cancel();
         _aiCts?.Dispose();
         _aiCts = new CancellationTokenSource();
         var token = _aiCts.Token;
 
-        AiThinking = true;
-        _statsTimer.Start();
-        NotifyAll();
+        bool isInstant = premove != null; // pondered reply: no visible thinking
+        if (!isInstant)
+        {
+            AiThinking = true;
+            _statsTimer.Start();
+            NotifyAll();
+        }
 
         var continueChain = false;
 
         try
         {
-            var move = await Task.Run(() => _ai.FindBestMove(_state, token), token);
+            var move = premove ?? await Task.Run(() => _ai.FindBestMove(_state, token), token);
 
             if (token.IsCancellationRequested) return;
 
@@ -275,6 +294,8 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             {
                 IsHumanTurn = !_aiVsAi;
                 continueChain = _aiVsAi;
+                if (!_aiVsAi)
+                    StartPondering();
             }
         }
         catch (Exception ex)
@@ -318,7 +339,57 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         _aiCts?.Cancel();
         _aiCts?.Dispose();
         _aiCts = null;
+        CancelPonder();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Pondering: the engine searches the position after its own move plus its
+    /// predicted human reply during the human's think time. If the human plays
+    /// the predicted reply, the reply move is already computed (see ExecuteMove);
+    /// on a different human move the unfinished ponder is cancelled and its
+    /// transposition-table entries still warm the next real search. Never in
+    /// AI-vs-AI mode.
+    /// </summary>
+    private void StartPondering()
+    {
+        var predicted = _ai.LastPredictedReply;
+        if (predicted == null)
+            return;
+
+        _ponderPrediction = predicted;
+        _ponderedMove = null;
+        _ponderCts?.Cancel();
+        _ponderCts?.Dispose();
+        _ponderCts = new CancellationTokenSource();
+        var token = _ponderCts.Token;
+        var ponderState = _state; // immutable snapshot; _state is only replaced
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var replyPosition = GameController.ApplyMove(ponderState, predicted.Value);
+                var move = _ai.Ponder(replyPosition, token);
+                if (!token.IsCancellationRequested && move != null)
+                    _ponderedMove = move;
+            }
+            catch (Exception ex)
+            {
+                // Pondering must never surface to the user: a failure just means
+                // a normal search on the human's actual move.
+                System.Diagnostics.Debug.WriteLine($"Ponder error: {ex.Message}");
+            }
+        });
+    }
+
+    private void CancelPonder()
+    {
+        _ponderCts?.Cancel();
+        _ponderCts?.Dispose();
+        _ponderCts = null;
+        _ponderPrediction = null;
+        _ponderedMove = null;
     }
 
     public Position GetVisualPosition(Position logicalPos)
