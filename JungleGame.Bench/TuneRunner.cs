@@ -238,6 +238,22 @@ internal static class TuneRunner
         for (int j = 0; j < WeightNames.Length; j++)
             Console.WriteLine($"  {WeightNames[j],-22} {d[j],8:F1} → {bestWeights[j],8:F1}");
 
+        // Degenerate-fit detector: the Aug 2026 20k-game fit produced a negative
+        // Mobility weight (inverts "more moves is better") and a negative
+        // DoomedPerRank (inverts the trapped-enemy bonus — see the P2b sanity
+        // checks in EvaluationTests pins). A fit with either inverted sign is
+        // rejected before adoption; surface it loudly.
+        var sanity = new (string Name, int Index, string Why)[]
+        {
+            ("Mobility", 15, "more moves must not lower the eval"),
+            ("DoomedPerRank", 5, "a trapped enemy must improve the eval"),
+        };
+        foreach (var (name, index, why) in sanity)
+        {
+            if (bestWeights[index] < 0)
+                Console.WriteLine($"WARNING: degenerate fit — {name} is {bestWeights[index]:F2} ({why}). DO NOT adopt; retune.");
+        }
+
         return 0;
     }
 
