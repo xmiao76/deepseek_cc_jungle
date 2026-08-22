@@ -31,8 +31,8 @@ internal static class ArenaRunner
         string? openingsFile = Args.ReadString(args, "--openings-file");
         int imbalanced = Args.ReadInt(args, "--openings-imbalanced", 0);
         bool smoke = args.Contains("--smoke");
-        int contemptA = Args.ReadInt(args, "--contemptA", 30);
-        int contemptB = Args.ReadInt(args, "--contemptB", 30);
+        int contemptA = Args.ReadInt(args, "--contemptA", 0);
+        int contemptB = Args.ReadInt(args, "--contemptB", 0);
 
         var openings = Openings.Load(openingsFile, imbalanced, seed);
         int pairs = openingsFile != null || imbalanced > 0

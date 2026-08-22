@@ -55,9 +55,11 @@ Notes
   windows, late move reductions, null-move and futility pruning, static
   exchange evaluation, late move pruning, a den-threat extension,
   killer/countermove/history move ordering, quiescence search, a bucketed
-  transposition table, mate-distance scoring, repetition detection with draw
-  contempt, and positional evaluation terms for den threats, trap handling,
+  transposition table, mate-distance scoring, threefold-repetition draws,
+  and positional evaluation terms for den threats, trap handling,
   and river play. It typically reaches 12 plies in 2 seconds.
+  (The optional draw-avoidance bias is off by default: its A/B gate showed
+  no strength gain.)
 - While the AI is thinking, the status line shows the live search progress
   (depth, nodes per second, and tablebase hits).
 - The AI ponders during your think time: after its own move it searches the

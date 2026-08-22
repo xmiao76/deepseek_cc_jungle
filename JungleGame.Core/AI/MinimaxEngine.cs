@@ -21,7 +21,8 @@ public class MinimaxEngine
     /// <param name="legacySearch">Disables the post-P3 search features (A/B strength tests).</param>
     /// <param name="useTablebase">Probes the endgame tables (default on; the tactical
     /// suite pins pure-search behavior and disables it).</param>
-    /// <param name="contempt">Draw-avoidance bias in centipawns (default 30; 0 = off).</param>
+    /// <param name="contempt">Draw-avoidance bias in centipawns (default 0 = off;
+    /// the A/B gate showed no strength gain — see CLAUDE.md recorded results).</param>
     /// <param name="maxNodes">Optional fixed-node budget for deterministic tests.</param>
     /// <param name="legacyEvalWeights">Uses the frozen pre-tuning weight vector instead of
     /// the current (tuned) one — the eval-weight A/B gate. Keeps the same feature set.</param>
@@ -33,7 +34,7 @@ public class MinimaxEngine
         bool legacyEval = false,
         bool legacySearch = false,
         bool useTablebase = true,
-        int contempt = 30,
+        int contempt = 0,
         long? maxNodes = null,
         bool legacyEvalWeights = false,
         bool useBook = false)

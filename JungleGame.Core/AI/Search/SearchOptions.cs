@@ -13,7 +13,7 @@ internal readonly struct SearchOptions
     internal readonly EvalParameters? EvalWeights; // explicit weight vector (A/B gate); null = process-wide
 
     internal SearchOptions(
-        bool legacyEval, bool legacySearch, bool enableTablebase = true, int contempt = 30,
+        bool legacyEval, bool legacySearch, bool enableTablebase = true, int contempt = 0,
         EvalParameters? evalWeights = null, bool useBook = false)
     {
         LegacyEval = legacyEval;
