@@ -17,3 +17,6 @@
 # Tablebase artifact ships next to the exe in the release zip (never in git)
 /release/jungle3.tb
 /_aux/
+/tuning-data-*.bin
+/weights-*.json
+/book-openings.tsuite
