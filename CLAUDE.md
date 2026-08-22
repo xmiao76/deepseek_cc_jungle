@@ -132,6 +132,23 @@ dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 40 --time
 #   FAILED the >= 55% gate — no evidence the bias helps. DEFAULT CHANGED TO 0
 #   (revert to the better-scoring config per protocol; --contemptA/--contemptB
 #   stay for re-tests). Draws are handled by the threefold rule either way.
+# - Tablebase A/B (probing on vs --noTablebaseB, 2026-08-21, quiet machine,
+#   --arena --openings-imbalanced 60 seed 42, 120 paired games): A (TB on)
+#   21 wins | B (off) 30 wins | 69 draws; A 41% of decisive (Wilson 95% CI
+#   [29%, 55%], p = 0.262 two-tailed, exit 1). FAILED the >= 55% gate.
+#   Diagnostic (2026-08-21): probe volume is significant — a 4-piece root
+#   search took 709 probes over ~35k nodes and a 3-piece root resolved from
+#   36 nodes — while node counts are neutral (TB on 34,997 vs off 34,794).
+#   The gap is therefore search-quality: exact mate-range TB scores flatten
+#   the endgame landscape for the A/B engine, and the documented 0.2%
+#   fortress-class mismatches (tolerated by --tb-verify) are believed
+#   blindly via depth-127 exact TT entries. Statistically the result is
+#   compatible with "no difference" (p = 0.262). Decision (2026-08-22, user):
+#   TB probing stays ON by default — perfect ≤3-piece endgame play is the
+#   feature's purpose, the error class is builder-tolerated, and the gate
+#   gap is non-significant; --noTablebaseA/B stays for re-tests. Re-test
+#   with the classic-start protocol if evidence matters more than endgame
+#   correctness.
 
 # Eval tuning harness (offline): generate self-play data (fixed-depth games,
 # --depthB asymmetry makes labels decisive-rich), then fit the linear eval
