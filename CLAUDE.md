@@ -120,11 +120,21 @@ dotnet run --project JungleGame.Bench -c Release -- --selfplay --games 40 --time
 #   depth 11 @ 600ms/660k nps (1s budget), depth 12 @ 813ms/876k nps (2s
 #   budget). P0 gates: 197/197 tests, coverage gate 83.8% (Core line rate),
 #   node-count regression gate passed, 11/11 tactical suite, arena smoke exit 0.
-# - P2b sanity on the first tuned-eval candidate (20k-game fit, weights-20k.json):
-#   REJECTED — MobilityWeight -9.54 (inverts "more moves is better") and
-#   DoomedPieceWeightPerRank -30.16 (trapped-enemy position swings -9 → -374).
-#   Do not adopt; retune via --gen-data/--tune (the tuner now detects these
-#   two sign inversions at fit time).
+# - Eval tuning (P4a) — BOTH iterations REJECTED; hand-tuned eval stands.
+#   Iteration 1 candidate (20k games / 337,658 records, weights-20k.json):
+#   Mobility -9.54 (inverts "more moves is better") and DoomedPerRank -30.16
+#   (trapped-enemy position swings -9 → -374). Iteration 2 (30k games /
+#   493,729 records, depth 6 vs 8, seed 42, weights-v13.json, 400 epochs
+#   lr 0.02): Mobility -6.23, DoomedPerRank -15.68, AND DenGuard +8→-9.35,
+#   JumpPath +10→-10.49 (sign flips), Forward 1→0.20, ThreatEqual 8→0.00.
+#   The tuner's degenerate-fit detector fired both times. Analysis: outcome-
+#   label fits on engine-vs-engine self-play are a closed loop — the labels
+#   largely encode the engine's current eval, so beyond material and the
+#   endgame/den-terms the fitted directions are noise-driven and unstable.
+#   The engineering outcome is the INSTRUMENTATION, not the weights:
+#   EvalParameters.Legacy freeze, per-engine weight threading, --legacyEvalB,
+#   and the fit detector all stay for a future fit against a better label
+#   source (search-score labels, not game results). Do NOT adopt either fit.
 # - Contempt A/B (draw-avoidance 30cp vs 0, 2026-08-21, --arena --openings-imbalanced 60
 #   seed 42, 120 paired games; note: light concurrent builds ran — the near-tie
 #   verdict is robust either way): A (30) 27 wins | B (0) 29 wins | 64 draws;
